@@ -644,20 +644,22 @@ async function captureAndProcess(slotNumber) {
       rawText = `Region A:\n${ocrA.data.text}\n\nRegion B:\n${ocrB.data.text}`;
       console.log("[DEBUG] Raw OCR text:", rawText);
 
-      // No text processing needed
-      processedText = rawText;
+      // Process text using the processing module
+      const { processText, formatForDiscord } = require("./lib/processing");
+      processedText = formatForDiscord(rawText);
     } catch (error) {
       console.error("[DEBUG] Error during image processing or OCR:", error);
       throw error;
     }
 
-    // Set to clipboard
-    clipboard.writeText(rawText);
+    // Set processed text to clipboard by default (user can choose raw if needed)
+    clipboard.writeText(processedText);
 
     // Send back to renderer along with debug image location (if debug mode enabled)
     if (debugMode && debugDir) {
       mainWindow.webContents.send("ocr-result", {
         raw: rawText,
+        processed: processedText,
         slot: slotNumber,
         debugDir: debugDir,
       });
@@ -670,6 +672,7 @@ async function captureAndProcess(slotNumber) {
     } else {
       mainWindow.webContents.send("ocr-result", {
         raw: rawText,
+        processed: processedText,
         slot: slotNumber,
       });
     }

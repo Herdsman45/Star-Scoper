@@ -1,0 +1,25 @@
+/* Star Call Format Styles */
+
+/* Style for star call format */
+#processed-text {
+  background-color: #f0f8ff; /* Light blue background */
+  border: 2px solid #4a90e2; /* Blue border */
+  font-size: 1.1em; /* Slightly larger text */
+  font-weight: 500; /* Semi-bold */
+  text-align: center; /* Center text */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  word-break: break-all; /* Prevent overflow on smaller screens */
+}
+
+/* Copy buttons */
+#copy-processed {
+  background-color: #4a90e2; /* Blue button */
+  color: white;
+  font-weight: bold;
+}
+
+#copy-processed:hover {
+  background-color: #357abd; /* Darker blue on hover */
+}
