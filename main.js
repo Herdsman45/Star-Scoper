@@ -847,12 +847,41 @@ ipcMain.handle("get-settings", async (event) => {
     hotkey1: store.get("hotkey1", "F13"),
     hotkey2: store.get("hotkey2", "F14"),
     debugMode: store.get("debugMode", false),
+    darkTheme: store.get("darkTheme", false),
   };
 });
 
 // Set debug mode
 ipcMain.handle("set-debug-mode", async (event, enabled) => {
   store.set("debugMode", enabled);
+  return { success: true };
+});
+
+// Set theme
+ipcMain.handle("set-theme", async (event, isDark) => {
+  store.set("darkTheme", isDark);
+  return { success: true };
+});
+
+// Save settings
+ipcMain.handle("save-settings", async (event, settings) => {
+  store.set("hotkey1", settings.hotkey1);
+  store.set("hotkey2", settings.hotkey2);
+  if (settings.darkTheme !== undefined) {
+    store.set("darkTheme", settings.darkTheme);
+  }
+  
+  // Re-register hotkeys if they've changed
+  globalShortcut.unregisterAll();
+  
+  globalShortcut.register(settings.hotkey1, () => {
+    if (!isCapturing) captureAndProcess(1);
+  });
+
+  globalShortcut.register(settings.hotkey2, () => {
+    if (!isCapturing) captureAndProcess(2);
+  });
+  
   return { success: true };
 });
 

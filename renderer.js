@@ -29,6 +29,16 @@ let currentRegions = { regionA: null, regionB: null };
 let mainContainer;
 let resizableBoxes = [];
 
+// Theme toggle
+const darkModeToggle = document.getElementById("dark-mode-toggle");
+
+// Check for saved theme preference or use preferred color scheme
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark" || (!savedTheme && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+  document.body.classList.add("dark-theme");
+  darkModeToggle.checked = true;
+}
+
 // Event listeners
 setSlot1Btn.addEventListener("click", () => setRegions(1));
 setSlot2Btn.addEventListener("click", () => setRegions(2));
@@ -43,6 +53,19 @@ copyProcessedBtn.addEventListener("click", () =>
 saveSettingsBtn.addEventListener("click", saveSettings);
 cancelSelectionBtn.addEventListener("click", cancelRegionSelection);
 saveRegionsBtn.addEventListener("click", saveSelectedRegions);
+
+// Dark mode toggle
+darkModeToggle.addEventListener("change", async () => {
+  if (darkModeToggle.checked) {
+    document.body.classList.add("dark-theme");
+    localStorage.setItem("theme", "dark");
+    await ipcRenderer.invoke("set-theme", true);
+  } else {
+    document.body.classList.remove("dark-theme");
+    localStorage.setItem("theme", "light");
+    await ipcRenderer.invoke("set-theme", false);
+  }
+});
 
 // Debug mode toggle
 debugModeCheckbox.addEventListener("change", async () => {
@@ -119,6 +142,7 @@ async function saveSettings() {
   const settings = {
     hotkey1: hotkeySlot1Input.value,
     hotkey2: hotkeySlot2Input.value,
+    darkTheme: darkModeToggle.checked,
   };
 
   await ipcRenderer.invoke("save-settings", settings);
@@ -131,6 +155,12 @@ async function loadSettings() {
 
   hotkeySlot1Input.value = settings.hotkey1;
   hotkeySlot2Input.value = settings.hotkey2;
+  
+  // Set theme based on stored preference (this runs after the initial check)
+  if (settings.darkTheme) {
+    document.body.classList.add("dark-theme");
+    if (darkModeToggle) darkModeToggle.checked = true;
+  }
 }
 
 // Update status for a slot
