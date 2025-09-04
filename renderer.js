@@ -29,6 +29,7 @@ const cancelSelectionBtn = document.getElementById("cancel-selection");
 let currentSlot = null;
 let currentRegions = { regionA: null, regionB: null };
 let selectionStep = 0; // 0: not selecting, 1: selecting regionA, 2: selecting regionB
+let mainContainer;
 
 // Event listeners
 setSlot1Btn.addEventListener("click", () => setRegions(1));
@@ -155,6 +156,13 @@ function showToast(message) {
 // Cancel region selection
 function cancelRegionSelection() {
   regionSelectionOverlay.classList.add("hidden");
+  regionSelectionOverlay.style.backgroundImage = "";
+  regionSelectionOverlay.style.backgroundSize = "";
+  regionSelectionOverlay.style.backgroundPosition = "";
+  mainContainer.style.opacity = "1";
+  selectionStep = 0;
+  document.removeEventListener("mousedown", handleMouseDown);
+  document.removeEventListener("mouseup", handleMouseUp);
   ipcRenderer.send("cancel-region-selection");
 }
 
@@ -170,12 +178,21 @@ ipcRenderer.on("status-update", (event, message) => {
 });
 
 // Region selection handling
-ipcRenderer.on("start-region-selection", (event, slotNumber) => {
-  currentSlot = slotNumber;
-  selectionStep = 1; // Start with regionA
-  document.addEventListener("mousedown", handleMouseDown);
-  document.addEventListener("mouseup", handleMouseUp);
-});
+ipcRenderer.on(
+  "start-region-selection",
+  (event, slotNumber, screenshotDataUrl) => {
+    currentSlot = slotNumber;
+    selectionStep = 1; // Start with regionA
+    mainContainer = document.querySelector(".container");
+    mainContainer.style.opacity = "0"; // Hide main content
+    regionSelectionOverlay.classList.remove("hidden");
+    regionSelectionOverlay.style.backgroundImage = `url(${screenshotDataUrl})`;
+    regionSelectionOverlay.style.backgroundSize = "100% 100%";
+    regionSelectionOverlay.style.backgroundPosition = "0 0";
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
+  }
+);
 
 // Mouse events for region selection
 let selectionStart = { x: 0, y: 0 };
@@ -195,6 +212,8 @@ function handleMouseDown(e) {
 
   // Update selection box on mouse move
   document.addEventListener("mousemove", handleMouseMove);
+
+  console.log(`[DEBUG] Selection started at client: ${e.clientX},${e.clientY}`);
 }
 
 function handleMouseMove(e) {
@@ -205,10 +224,13 @@ function handleMouseMove(e) {
   const width = Math.abs(e.clientX - selectionStart.x);
   const height = Math.abs(e.clientY - selectionStart.y);
 
-  selectionBox.style.left = x + "px";
+  selectionBox.style.left = x + "px"; // Now using client coordinates directly
   selectionBox.style.top = y + "px";
   selectionBox.style.width = width + "px";
   selectionBox.style.height = height + "px";
+
+  // Add debug info to selection box
+  selectionBox.setAttribute("data-debug", `${x},${y} | ${width}x${height}`);
 }
 
 function handleMouseUp(e) {
@@ -217,11 +239,16 @@ function handleMouseUp(e) {
   document.removeEventListener("mousemove", handleMouseMove);
   selectionActive = false;
 
-  // Get selection coordinates
-  const x = Math.min(e.clientX, selectionStart.x);
-  const y = Math.min(e.clientY, selectionStart.y);
-  const width = Math.abs(e.clientX - selectionStart.x);
-  const height = Math.abs(e.clientY - selectionStart.y);
+  // Get selection coordinates - using client coordinates instead of screen coordinates
+  // to make them relative to the overlay/document
+  const x = Math.min(e.clientX, selectionStart.clientX || selectionStart.x);
+  const y = Math.min(e.clientY, selectionStart.clientY || selectionStart.y);
+  const width = Math.abs(
+    e.clientX - (selectionStart.clientX || selectionStart.x)
+  );
+  const height = Math.abs(
+    e.clientY - (selectionStart.clientY || selectionStart.y)
+  );
 
   // Clean up selection box
   if (selectionBox) {
@@ -229,15 +256,33 @@ function handleMouseUp(e) {
     selectionBox = null;
   }
 
-  // Store selected region
+  // Store selected region with absolute coordinates
   if (selectionStep === 1) {
-    currentRegions.regionA = { x, y, width, height };
+    currentRegions.regionA = {
+      x: x,
+      y: y,
+      width,
+      height,
+    };
+    console.log(
+      "[DEBUG] Selected regionA:",
+      JSON.stringify(currentRegions.regionA)
+    );
     showToast("Main dialog region selected! Now select the world line region.");
     selectionStep = 2;
   } else if (selectionStep === 2) {
-    currentRegions.regionB = { x, y, width, height };
+    currentRegions.regionB = {
+      x: x,
+      y: y,
+      width,
+      height,
+    };
+    console.log(
+      "[DEBUG] Selected regionB:",
+      JSON.stringify(currentRegions.regionB)
+    );
 
-    // Send regions back to main process
+    // Send regions back to main process with absolute coordinates
     ipcRenderer.send("regions-selected", {
       regionA: currentRegions.regionA,
       regionB: currentRegions.regionB,
@@ -248,7 +293,10 @@ function handleMouseUp(e) {
     document.removeEventListener("mousedown", handleMouseDown);
     document.removeEventListener("mouseup", handleMouseUp);
     regionSelectionOverlay.classList.add("hidden");
-
+    regionSelectionOverlay.style.backgroundImage = "";
+    regionSelectionOverlay.style.backgroundSize = "";
+    regionSelectionOverlay.style.backgroundPosition = "";
+    mainContainer.style.opacity = "1"; // Show main content again
     showToast("Both regions selected and saved!");
   }
 }
