@@ -30,8 +30,24 @@ async function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
       contextIsolation: false, // Keep this false since we've already built with direct IPC access
+      webSecurity: true,
+      allowRunningInsecureContent: false,
     },
   });
+
+  // Set CSP headers
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+          ],
+        },
+      });
+    }
+  );
 
   // Load the UI
   mainWindow.loadFile("index.html");
@@ -54,17 +70,39 @@ async function createWindow() {
     console.error("OCR initialization failed:", error);
   }
 
-  // Register global capture hotkeys
-  const hotkey1 = store.get("hotkey1", "F13");
-  const hotkey2 = store.get("hotkey2", "F14");
+  // Register global capture hotkeys with platform-specific defaults
+  const isMac = process.platform === 'darwin';
+  const defaultHotkey1 = isMac ? "Command+F1" : "F13";
+  const defaultHotkey2 = isMac ? "Command+F2" : "F14";
+  
+  const hotkey1 = store.get("hotkey1", defaultHotkey1);
+  const hotkey2 = store.get("hotkey2", defaultHotkey2);
 
-  globalShortcut.register(hotkey1, () => {
-    if (!isCapturing) captureAndProcess(1);
-  });
-
-  globalShortcut.register(hotkey2, () => {
-    if (!isCapturing) captureAndProcess(2);
-  });
+  try {
+    globalShortcut.register(hotkey1, () => {
+      if (!isCapturing) captureAndProcess(1);
+    });
+    
+    globalShortcut.register(hotkey2, () => {
+      if (!isCapturing) captureAndProcess(2);
+    });
+    
+    console.log("Hotkeys registered successfully:", hotkey1, hotkey2);
+  } catch (error) {
+    console.error("Failed to register hotkeys:", error);
+    // Fallback to alternative hotkeys if needed
+    if (!globalShortcut.isRegistered(hotkey1)) {
+      const fallbackKey1 = isMac ? "Alt+F1" : "Alt+1";
+      try {
+        globalShortcut.register(fallbackKey1, () => {
+          if (!isCapturing) captureAndProcess(1);
+        });
+        console.log("Using fallback hotkey for Slot 1:", fallbackKey1);
+      } catch (e) {
+        console.error("Failed to register fallback hotkey:", e);
+      }
+    }
+  }
 }
 
 // Capture regions and process for a specific slot
@@ -751,8 +789,14 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
   // Generate a data URL from the thumbnail
   const screenshotDataUrl = targetSource.thumbnail.toDataURL();
 
-  // Make window full screen
-  mainWindow.setFullScreen(true);
+  // Platform-specific full screen handling
+  if (process.platform === 'darwin') {
+    // On macOS, we use simpleFullscreen to avoid the green button animation
+    mainWindow.setSimpleFullScreen(true);
+  } else {
+    // On Windows/Linux, use standard fullscreen
+    mainWindow.setFullScreen(true);
+  }
 
   // Tell renderer to start region selection with the screenshot and existing regions
   mainWindow.webContents.send(
@@ -870,10 +914,10 @@ ipcMain.handle("save-settings", async (event, settings) => {
   if (settings.darkTheme !== undefined) {
     store.set("darkTheme", settings.darkTheme);
   }
-  
+
   // Re-register hotkeys if they've changed
   globalShortcut.unregisterAll();
-  
+
   globalShortcut.register(settings.hotkey1, () => {
     if (!isCapturing) captureAndProcess(1);
   });
@@ -881,7 +925,7 @@ ipcMain.handle("save-settings", async (event, settings) => {
   globalShortcut.register(settings.hotkey2, () => {
     if (!isCapturing) captureAndProcess(2);
   });
-  
+
   return { success: true };
 });
 
@@ -895,7 +939,30 @@ ipcMain.on("open-debug-folder", (event, folderPath) => {
 });
 
 // App lifecycle
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  
+  // On macOS, check for screen capture permissions
+  if (process.platform === 'darwin') {
+    const { systemPreferences } = require('electron');
+    const hasScreenCapturePermission = systemPreferences.getMediaAccessStatus('screen');
+    
+    if (hasScreenCapturePermission !== 'granted') {
+      console.log('Requesting screen recording permission...');
+      // This will prompt the user for screen recording permission
+      systemPreferences.askForMediaAccess('screen')
+        .then((granted) => {
+          if (!granted) {
+            // Inform the user that screen capture permissions are needed
+            mainWindow.webContents.send(
+              "status-update",
+              "Screen recording permission is required. Please enable it in System Preferences > Security & Privacy > Privacy > Screen Recording."
+            );
+          }
+        });
+    }
+  }
+});
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
@@ -904,8 +971,14 @@ app.on("window-all-closed", () => {
 app.on("will-quit", () => {
   // Unregister all shortcuts
   globalShortcut.unregisterAll();
+  
+  // Clean up OCR worker
+  if (ocrWorker) {
+    ocrWorker.terminate();
+  }
 });
 
 app.on("activate", () => {
+  // On macOS it's common to re-create a window when the dock icon is clicked
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });

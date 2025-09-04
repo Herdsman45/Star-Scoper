@@ -34,7 +34,12 @@ const darkModeToggle = document.getElementById("dark-mode-toggle");
 
 // Check for saved theme preference or use preferred color scheme
 const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark" || (!savedTheme && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+if (
+  savedTheme === "dark" ||
+  (!savedTheme &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches)
+) {
   document.body.classList.add("dark-theme");
   darkModeToggle.checked = true;
 }
@@ -155,7 +160,7 @@ async function loadSettings() {
 
   hotkeySlot1Input.value = settings.hotkey1;
   hotkeySlot2Input.value = settings.hotkey2;
-  
+
   // Set theme based on stored preference (this runs after the initial check)
   if (settings.darkTheme) {
     document.body.classList.add("dark-theme");
