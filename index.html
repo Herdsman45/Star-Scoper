@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>OCR Tool</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>OCR Tool</h1>
+
+      <div class="section">
+        <h2>Quick Capture</h2>
+        <div class="slots">
+          <div class="slot">
+            <h3>Slot 1</h3>
+            <button id="set-slot1">Set Regions</button>
+            <button id="capture-slot1">Capture (F13)</button>
+            <div class="status" id="status-slot1"></div>
+          </div>
+
+          <div class="slot">
+            <h3>Slot 2</h3>
+            <button id="set-slot2">Set Regions</button>
+            <button id="capture-slot2">Capture (F14)</button>
+            <div class="status" id="status-slot2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>OCR Result</h2>
+        <div class="result-container">
+          <div class="result-column">
+            <h3>Raw Text</h3>
+            <div class="result-box" id="raw-text"></div>
+            <button id="copy-raw">Copy Raw</button>
+          </div>
+
+          <div class="result-column">
+            <h3>Processed Text</h3>
+            <div class="result-box" id="processed-text"></div>
+            <button id="copy-processed">Copy Processed</button>
+            <button id="send-discord">Send to Discord</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Settings</h2>
+        <div class="settings-grid">
+          <div class="setting">
+            <label for="tesseract-path">Tesseract Path:</label>
+            <input type="text" id="tesseract-path" />
+            <button id="browse-tesseract">Browse</button>
+          </div>
+
+          <div class="setting">
+            <label for="trigger-key">Trigger Key:</label>
+            <input type="text" id="trigger-key" value="w" />
+          </div>
+
+          <div class="setting">
+            <label for="hotkey-slot1">Slot 1 Hotkey:</label>
+            <input type="text" id="hotkey-slot1" value="F13" />
+          </div>
+
+          <div class="setting">
+            <label for="hotkey-slot2">Slot 2 Hotkey:</label>
+            <input type="text" id="hotkey-slot2" value="F14" />
+          </div>
+
+          <div class="setting checkbox">
+            <input type="checkbox" id="auto-discord" checked />
+            <label for="auto-discord">Automatically send to Discord</label>
+          </div>
+        </div>
+
+        <button id="save-settings">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Region selection overlay (hidden by default) -->
+    <div id="region-selection-overlay" class="hidden">
+      <div class="instructions">
+        <h2>
+          Select Regions for Slot <span id="selection-slot-number"></span>
+        </h2>
+        <p>1. First, select the main dialog region</p>
+        <p>2. Then select the world line region</p>
+        <button id="cancel-selection">Cancel</button>
+      </div>
+    </div>
+
+    <script src="renderer.js"></script>
+  </body>
+</html>

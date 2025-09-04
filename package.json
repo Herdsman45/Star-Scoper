@@ -1,0 +1,36 @@
+{
+  "name": "electron-ocr-tool",
+  "version": "1.0.0",
+  "description": "Cross-platform OCR tool for screen capture and text processing",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^24.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "robotjs": "^0.6.0",
+    "sharp": "^0.32.0",
+    "tesseract.js": "^4.0.0"
+  },
+  "build": {
+    "appId": "com.electron.ocr-tool",
+    "productName": "OCR Tool",
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
