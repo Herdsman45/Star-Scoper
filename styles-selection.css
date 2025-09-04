@@ -1,0 +1,108 @@
+/* Styles for the new movable, resizable selection boxes */
+
+.resizable-box {
+  position: absolute;
+  border: 2px dashed #ff5722;
+  background-color: rgba(255, 87, 34, 0.2);
+  /* Removed min-width and min-height to allow smaller boxes */
+  cursor: move;
+  z-index: 1000;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+/* Add specific styles for each region type */
+.resizable-box[data-region-type="regionA"] {
+  min-width: 50px;
+  min-height: 40px;
+}
+
+.resizable-box[data-region-type="regionB"] {
+  min-width: 5px;
+  min-height: 5px;
+}
+
+.resizable-box.active {
+  border-color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.2);
+}
+
+.resizable-box .resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border: 1px solid #ff5722;
+  border-radius: 50%;
+}
+
+.resizable-box.active .resize-handle {
+  border-color: #4caf50;
+}
+
+/* Top left handle */
+.resize-handle.tl {
+  top: -5px;
+  left: -5px;
+  cursor: nw-resize;
+}
+
+/* Top right handle */
+.resize-handle.tr {
+  top: -5px;
+  right: -5px;
+  cursor: ne-resize;
+}
+
+/* Bottom left handle */
+.resize-handle.bl {
+  bottom: -5px;
+  left: -5px;
+  cursor: sw-resize;
+}
+
+/* Bottom right handle */
+.resize-handle.br {
+  bottom: -5px;
+  right: -5px;
+  cursor: se-resize;
+}
+
+.box-label {
+  position: absolute;
+  top: -25px;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.selection-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+  z-index: 1100;
+}
+
+.selection-controls button {
+  margin: 0 5px;
+  padding: 8px 20px;
+}
+
+.selection-controls .button-save {
+  background-color: #4caf50;
+}
+
+.selection-controls .button-cancel {
+  background-color: #f44336;
+}

@@ -83,3 +83,6 @@ dist-ssr
 
 # Image temp files
 tmp/
+
+StarTool/
+Trash/

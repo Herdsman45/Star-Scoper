@@ -11,7 +11,6 @@ const path = require("path");
 const os = require("os");
 const { createWorker } = require("tesseract.js");
 const Store = require("electron-store");
-const { processText } = require("./lib/processing");
 const sharp = require("sharp");
 
 // Storage for saved regions and settings
@@ -73,6 +72,21 @@ async function captureAndProcess(slotNumber) {
   try {
     isCapturing = true;
 
+    // Check if debug mode is enabled
+    const debugMode = store.get("debugMode", false);
+
+    // Create debug directory if debug mode is enabled
+    let debugDir = null;
+    if (debugMode) {
+      debugDir = path.join(os.tmpdir(), "ocr-debug");
+      if (!fs.existsSync(debugDir)) {
+        fs.mkdirSync(debugDir, { recursive: true });
+      }
+    }
+
+    // Define scale factor for both regions
+    const scaleFactor = 3; // Use a moderate scale factor
+
     // Load saved regions for this slot
     const regionsKey = `slot${slotNumber}_regions`;
     const regions = store.get(regionsKey);
@@ -98,8 +112,18 @@ async function captureAndProcess(slotNumber) {
       `Capturing slot ${slotNumber}...`
     );
 
-    // Since we have issues with screen capture APIs, let's use the same approach
-    // as we did for region selection
+    // Get the current display where the app window is
+    const { screen } = require("electron");
+    const currentDisplay = screen.getDisplayNearestPoint({
+      x: mainWindow.getBounds().x,
+      y: mainWindow.getBounds().y,
+    });
+
+    console.log(
+      `[DEBUG] Capturing on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
+    );
+
+    // Use Electron's desktopCapturer to get all screen sources
     const sources = await desktopCapturer.getSources({
       types: ["screen"],
       thumbnailSize: { width: 1920, height: 1080 },
@@ -109,8 +133,26 @@ async function captureAndProcess(slotNumber) {
       throw new Error("No screens available for capture");
     }
 
-    // Get the primary display (first source)
-    const source = sources[0];
+    // Try to find the source that matches our current display
+    let source = sources[0]; // Default to first source
+
+    if (sources.length > 1) {
+      // Try to match by display_id if available
+      if (currentDisplay.id) {
+        const matchedSource = sources.find(
+          (s) =>
+            s.display_id === currentDisplay.id.toString() ||
+            s.id.includes(currentDisplay.id.toString())
+        );
+
+        if (matchedSource) {
+          source = matchedSource;
+          console.log(
+            `[DEBUG] Found matching display source for capture: ${source.name}`
+          );
+        }
+      }
+    }
 
     // Get the image data
     const nativeImage = source.thumbnail;
@@ -174,22 +216,149 @@ async function captureAndProcess(slotNumber) {
         JSON.stringify(normalizedA)
       );
 
-      // Crop and OCR regionA
+      // Crop and OCR regionA with 3x scaling for better results
+      // Apply the same scale factor defined earlier
+
+      // Crop and resize regionA
       const croppedA = await image
         .clone()
         .extract(normalizedA)
+        .resize({
+          width: normalizedA.width * scaleFactor,
+          height: normalizedA.height * scaleFactor,
+          fit: "fill",
+        })
         .png()
         .toBuffer();
 
-      // Save debug image for regionA
-      if (process.env.DEBUG) {
-        const debugDir = path.join(os.tmpdir(), "ocr-debug");
-        if (!fs.existsSync(debugDir)) {
-          fs.mkdirSync(debugDir, { recursive: true });
-        }
+      console.log(`[DEBUG] Resized regionA (${scaleFactor}x) for better OCR`);
+
+      // Save debug image for regionA if debug mode is enabled
+      if (debugMode && debugDir) {
         const debugPathA = path.join(debugDir, `region_A_${Date.now()}.png`);
         fs.writeFileSync(debugPathA, croppedA);
         console.log(`[DEBUG] Saved regionA image to ${debugPathA}`);
+
+        // Save a debug image showing the entire screen with an outline of where we're cropping
+        const debugFullPath = path.join(
+          debugDir,
+          `full_screen_${Date.now()}.png`
+        );
+
+        // Draw rectangle for debugging (drawing a border instead of a filled rectangle)
+        try {
+          const fullImage = sharp(imgBuffer);
+
+          // Create a transparent image
+          const debugOverlay = await sharp({
+            create: {
+              width: imgWidth,
+              height: imgHeight,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          })
+            .png()
+            .toBuffer();
+
+          // Draw border by creating 4 thin rectangles (top, right, bottom, left)
+          const border = 5; // Border thickness in pixels
+
+          // Create top border
+          let debugOverlayWithBorder = await sharp(debugOverlay)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: {
+                  width: 1,
+                  height: 1,
+                  channels: 4,
+                },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left,
+                width: normalizedA.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Create bottom border
+          debugOverlayWithBorder = await sharp(debugOverlayWithBorder)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: {
+                  width: 1,
+                  height: 1,
+                  channels: 4,
+                },
+                tile: true,
+                top: normalizedA.top + normalizedA.height - border,
+                left: normalizedA.left,
+                width: normalizedA.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Create left border
+          debugOverlayWithBorder = await sharp(debugOverlayWithBorder)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: {
+                  width: 1,
+                  height: 1,
+                  channels: 4,
+                },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left,
+                width: border,
+                height: normalizedA.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Create right border
+          debugOverlayWithBorder = await sharp(debugOverlayWithBorder)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: {
+                  width: 1,
+                  height: 1,
+                  channels: 4,
+                },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left + normalizedA.width - border,
+                width: border,
+                height: normalizedA.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          await fullImage
+            .composite([
+              {
+                input: debugOverlayWithBorder,
+                blend: "over",
+              },
+            ])
+            .toFile(debugFullPath);
+
+          console.log(
+            `[DEBUG] Saved full screen debug image to ${debugFullPath}`
+          );
+        } catch (err) {
+          console.error("[DEBUG] Error saving debug overlay:", err);
+        }
       }
 
       console.log("[DEBUG] About to recognize regionA with Tesseract");
@@ -209,55 +378,301 @@ async function captureAndProcess(slotNumber) {
       );
 
       // Crop and OCR regionB
-      const croppedB = await image
-        .clone()
-        .extract(normalizedB)
-        .png()
-        .toBuffer();
+      // For the World Line region, apply simple resizing
+      let croppedB;
 
-      // Save debug image for regionB
-      if (process.env.DEBUG) {
-        const debugDir = path.join(os.tmpdir(), "ocr-debug");
-        if (!fs.existsSync(debugDir)) {
-          fs.mkdirSync(debugDir, { recursive: true });
+      // Simple resize for region B (World Line)
+      // Using the scale factor defined earlier
+
+      try {
+        // Extract and resize with simple processing
+        croppedB = await image
+          .clone()
+          .extract(normalizedB)
+          .resize({
+            width: normalizedB.width * scaleFactor,
+            height: normalizedB.height * scaleFactor,
+            fit: "fill",
+          })
+          .png()
+          .toBuffer();
+
+        console.log(`[DEBUG] Resized regionB (${scaleFactor}x) for better OCR`);
+
+        // Save the original cropped version too for comparison if debug mode is enabled
+        if (debugMode && debugDir) {
+          const originalCropped = await image
+            .clone()
+            .extract(normalizedB)
+            .png()
+            .toBuffer();
+
+          fs.writeFileSync(
+            path.join(debugDir, `region_B_original_${Date.now()}.png`),
+            originalCropped
+          );
         }
+      } catch (err) {
+        // Fallback in case of error with advanced processing
+        console.error("[DEBUG] Error in advanced image processing:", err);
+        croppedB = await image.clone().extract(normalizedB).png().toBuffer();
+      }
+
+      // Save debug image for regionB if debug mode is enabled
+      if (debugMode && debugDir) {
         const debugPathB = path.join(debugDir, `region_B_${Date.now()}.png`);
         fs.writeFileSync(debugPathB, croppedB);
         console.log(`[DEBUG] Saved regionB image to ${debugPathB}`);
 
-        // Also save the full screenshot for reference
+        // Create another debug image showing both regions
+        const debugFullPathB = path.join(
+          debugDir,
+          `full_screen_with_regions_${Date.now()}.png`
+        );
+
+        // Draw borders for both regions
+        try {
+          const fullImageForBoth = sharp(imgBuffer);
+          const border = 5; // Border thickness in pixels
+
+          // Create a transparent image
+          let bothRegionsOverlay = await sharp({
+            create: {
+              width: imgWidth,
+              height: imgHeight,
+              channels: 4,
+              background: { r: 0, g: 0, b: 0, alpha: 0 },
+            },
+          })
+            .png()
+            .toBuffer();
+
+          // Add regionA borders (red)
+          // Top border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left,
+                width: normalizedA.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Bottom border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedA.top + normalizedA.height - border,
+                left: normalizedA.left,
+                width: normalizedA.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Left border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left,
+                width: border,
+                height: normalizedA.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Right border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([255, 0, 0, 255]), // Solid red
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedA.top,
+                left: normalizedA.left + normalizedA.width - border,
+                width: border,
+                height: normalizedA.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Add regionB borders (bright green for better visibility)
+          // Top border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([0, 255, 0, 255]), // Bright green
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedB.top,
+                left: normalizedB.left,
+                width: normalizedB.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Bottom border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([0, 255, 0, 255]), // Bright green
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedB.top + normalizedB.height - border,
+                left: normalizedB.left,
+                width: normalizedB.width,
+                height: border,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Left border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([0, 255, 0, 255]), // Bright green
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedB.top,
+                left: normalizedB.left,
+                width: border,
+                height: normalizedB.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Right border
+          bothRegionsOverlay = await sharp(bothRegionsOverlay)
+            .composite([
+              {
+                input: Buffer.from([0, 255, 0, 255]), // Bright green
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                top: normalizedB.top,
+                left: normalizedB.left + normalizedB.width - border,
+                width: border,
+                height: normalizedB.height,
+              },
+            ])
+            .png()
+            .toBuffer();
+
+          // Compose final image
+          await fullImageForBoth
+            .composite([
+              {
+                input: bothRegionsOverlay,
+                blend: "over",
+              },
+            ])
+            .toFile(debugFullPathB);
+
+          console.log(
+            `[DEBUG] Saved full screen with both regions to ${debugFullPathB}`
+          );
+        } catch (err) {
+          console.error(
+            "[DEBUG] Error saving debug overlay with both regions:",
+            err
+          );
+        }
+      }
+
+      // Save the full screenshot for reference if debug mode is enabled
+      if (debugMode && debugDir) {
         const fullScreenPath = path.join(
           debugDir,
-          `full_screen_${Date.now()}.png`
+          `full_screen_original_${Date.now()}.png`
         );
         fs.writeFileSync(fullScreenPath, imgBuffer);
         console.log(`[DEBUG] Saved full screenshot to ${fullScreenPath}`);
       }
 
       console.log("[DEBUG] About to recognize regionB with Tesseract");
+
+      // Use simple OCR parameters for World Line numbers
+      try {
+        // Just set a character whitelist for digits and symbols
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist: "0123456789.%-",
+        });
+
+        ocrB = await ocrWorker.recognize(croppedB);
+        console.log("[DEBUG] RegionB recognized successfully");
+      } catch (error) {
+        console.error("[DEBUG] Error with OCR for regionB:", error);
+        // Try without parameters
+        ocrB = await ocrWorker.recognize(croppedB);
+        console.log("[DEBUG] RegionB recognized with default settings");
+      }
+
+      // Use simple character whitelist for world line text
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist:
+          "0123456789.%-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", // Include letters for any text
+      });
+
       ocrB = await ocrWorker.recognize(croppedB);
       console.log("[DEBUG] RegionB recognized successfully");
+
+      // Reset whitelist for future OCR operations
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist: "",
+      });
 
       // Combine raw text - access properties correctly for Tesseract.js v4
       rawText = `Region A:\n${ocrA.data.text}\n\nRegion B:\n${ocrB.data.text}`;
       console.log("[DEBUG] Raw OCR text:", rawText);
 
-      // Process text
-      processedText = processText(rawText);
+      // No text processing needed
+      processedText = rawText;
     } catch (error) {
       console.error("[DEBUG] Error during image processing or OCR:", error);
       throw error;
     }
 
     // Set to clipboard
-    clipboard.writeText(processedText);
+    clipboard.writeText(rawText);
 
-    // Send back to renderer
-    mainWindow.webContents.send("ocr-result", {
-      raw: rawText,
-      processed: processedText,
-      slot: slotNumber,
-    });
+    // Send back to renderer along with debug image location (if debug mode enabled)
+    if (debugMode && debugDir) {
+      mainWindow.webContents.send("ocr-result", {
+        raw: rawText,
+        slot: slotNumber,
+        debugDir: debugDir,
+      });
+
+      // Show notification about debug images
+      mainWindow.webContents.send(
+        "status-update",
+        `Debug images saved to: ${debugDir}`
+      );
+    } else {
+      mainWindow.webContents.send("ocr-result", {
+        raw: rawText,
+        slot: slotNumber,
+      });
+    }
 
     isCapturing = false;
   } catch (error) {
@@ -268,9 +683,31 @@ async function captureAndProcess(slotNumber) {
 }
 
 // Set regions for a slot
-ipcMain.handle("set-regions", async (event, slotNumber) => {
+ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
   const regionsKey = `slot${slotNumber}_regions`;
   console.log(`[DEBUG] Starting region selection for slot ${slotNumber}`);
+  console.log(`[DEBUG] Existing regions:`, existingRegions);
+
+  // Get the current display where the app window is
+  const { screen } = require("electron");
+  const currentDisplay = screen.getDisplayNearestPoint({
+    x: mainWindow.getBounds().x,
+    y: mainWindow.getBounds().y,
+  });
+
+  console.log(
+    `[DEBUG] App window is on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
+  );
+
+  // Store the display dimensions for later coordinate scaling
+  store.set("captureDisplayInfo", {
+    width: currentDisplay.size.width,
+    height: currentDisplay.size.height,
+    workAreaWidth: currentDisplay.workArea.width,
+    workAreaHeight: currentDisplay.workArea.height,
+    bounds: currentDisplay.bounds,
+    workArea: currentDisplay.workArea,
+  });
 
   // Use Electron's desktopCapturer to get all screen sources
   const sources = await desktopCapturer.getSources({
@@ -278,20 +715,48 @@ ipcMain.handle("set-regions", async (event, slotNumber) => {
     thumbnailSize: { width: 1920, height: 1080 },
   });
 
-  // Get the primary display (usually the first one)
-  const primarySource = sources[0];
+  console.log(`[DEBUG] Found ${sources.length} screen sources`);
+
+  // Try to find the source that matches our current display
+  let targetSource = sources[0]; // Default to first source if we can't find a match
+
+  if (sources.length > 1) {
+    // Log all displays to help with debugging
+    sources.forEach((source, index) => {
+      console.log(
+        `[DEBUG] Source ${index}: ${source.id}, ${source.name}, ${source.display_id}`
+      );
+    });
+
+    // Try to match by display_id if available
+    if (currentDisplay.id) {
+      const matchedSource = sources.find(
+        (s) =>
+          s.display_id === currentDisplay.id.toString() ||
+          s.id.includes(currentDisplay.id.toString())
+      );
+
+      if (matchedSource) {
+        targetSource = matchedSource;
+        console.log(
+          `[DEBUG] Found matching display source: ${targetSource.name}`
+        );
+      }
+    }
+  }
 
   // Generate a data URL from the thumbnail
-  const screenshotDataUrl = primarySource.thumbnail.toDataURL();
+  const screenshotDataUrl = targetSource.thumbnail.toDataURL();
 
   // Make window full screen
   mainWindow.setFullScreen(true);
 
-  // Tell renderer to start region selection with the screenshot
+  // Tell renderer to start region selection with the screenshot and existing regions
   mainWindow.webContents.send(
     "start-region-selection",
     slotNumber,
-    screenshotDataUrl
+    screenshotDataUrl,
+    existingRegions
   );
 
   // Wait for regions from renderer
@@ -338,6 +803,31 @@ ipcMain.handle("set-regions", async (event, slotNumber) => {
   });
 });
 
+// Get regions for a slot
+ipcMain.handle("get-regions", async (event, slotNumber) => {
+  const regionsKey = `slot${slotNumber}_regions`;
+  return store.get(regionsKey, null);
+});
+
+// Handle request for display information for coordinate scaling
+ipcMain.handle("get-display-info", async (event) => {
+  const displayInfo = store.get("captureDisplayInfo");
+  if (!displayInfo) {
+    // If we don't have stored display info, return the current display
+    const { screen } = require("electron");
+    const currentDisplay = screen.getDisplayNearestPoint({
+      x: mainWindow.getBounds().x,
+      y: mainWindow.getBounds().y,
+    });
+
+    return {
+      width: currentDisplay.size.width,
+      height: currentDisplay.size.height,
+    };
+  }
+  return displayInfo;
+});
+
 // Capture slot
 ipcMain.handle("capture-slot", async (event, slotNumber) => {
   if (!isCapturing) {
@@ -348,62 +838,28 @@ ipcMain.handle("capture-slot", async (event, slotNumber) => {
   }
 });
 
-// Save settings
-ipcMain.handle("save-settings", async (event, settings) => {
-  for (const [key, value] of Object.entries(settings)) {
-    store.set(key, value);
-  }
-
-  // Re-register hotkeys if they changed
-  if (settings.hotkey1 || settings.hotkey2) {
-    globalShortcut.unregisterAll();
-
-    const hotkey1 = settings.hotkey1 || store.get("hotkey1", "F13");
-    const hotkey2 = settings.hotkey2 || store.get("hotkey2", "F14");
-
-    globalShortcut.register(hotkey1, () => {
-      if (!isCapturing) captureAndProcess(1);
-    });
-
-    globalShortcut.register(hotkey2, () => {
-      if (!isCapturing) captureAndProcess(2);
-    });
-  }
-
-  return { success: true };
-});
-
 // Get settings
 ipcMain.handle("get-settings", async (event) => {
   return {
     hotkey1: store.get("hotkey1", "F13"),
     hotkey2: store.get("hotkey2", "F14"),
-    tesseractPath: store.get("tesseractPath", ""),
-    autoActivateDiscord: store.get("autoActivateDiscord", true),
-    triggerKey: store.get("triggerKey", "w"),
+    debugMode: store.get("debugMode", false),
   };
 });
 
-// Browse for Tesseract path
-ipcMain.handle("browse-tesseract", async (event) => {
-  const { dialog } = require("electron");
-  const result = await dialog.showOpenDialog({
-    properties: ["openFile"],
-    filters: [{ name: "Executables", extensions: ["exe"] }],
-  });
-
-  if (!result.canceled && result.filePaths.length > 0) {
-    return { path: result.filePaths[0] };
-  } else {
-    return { path: null };
-  }
+// Set debug mode
+ipcMain.handle("set-debug-mode", async (event, enabled) => {
+  store.set("debugMode", enabled);
+  return { success: true };
 });
 
-// Send to Discord
-ipcMain.handle("send-to-discord", async (event) => {
-  // TODO: Implement Discord activation and pasting
-  // For now, just return success
-  return { success: true };
+// Handle opening debug folder
+ipcMain.on("open-debug-folder", (event, folderPath) => {
+  console.log(`[DEBUG] Opening debug folder: ${folderPath}`);
+
+  // Use the operating system's file explorer to open the folder
+  const { shell } = require("electron");
+  shell.openPath(folderPath);
 });
 
 // App lifecycle
