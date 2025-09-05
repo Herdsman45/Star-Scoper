@@ -27,6 +27,7 @@ async function createWindow() {
     width: 900,
     height: 700,
     autoHideMenuBar: true, // Hides the menu bar but allows showing with Alt key
+    icon: path.join(__dirname, 'build/icon.ico'), // Explicitly set the icon
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
