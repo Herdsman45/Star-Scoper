@@ -68,8 +68,14 @@ Example: 1.0.0, 1.0.1, 1.1.0, 2.0.0
 
 The application requires icons in the following formats:
 
-- Windows: `build/icon.ico` (256x256 pixels)
-- macOS: `build/icon.icns` (1024x1024 pixels)
+- Windows: `build/icon.ico` (containing multiple sizes: 16x16 to 256x256 pixels)
+- macOS: `build/icon.icns` (containing multiple sizes: 16x16 to 1024x1024 pixels)
 - Linux: `build/icon.png` (1024x1024 pixels)
 
-These icon files are included in the repository. If you want to change the app icon, replace these files with your own versions while keeping the same filenames.
+These icon files are included in the repository. If you want to change the app icon, you can:
+
+1. Replace `build/icon.png` with your own 1024x1024 PNG image
+2. Run the icon generation script: `node scripts/generate-icons.js`
+3. The script will create all necessary icon formats and sizes in the `build/icons` directory and copy them to the appropriate locations
+
+This ensures that all platforms have properly sized icons for different display contexts (taskbar, title bar, file explorer, etc.).

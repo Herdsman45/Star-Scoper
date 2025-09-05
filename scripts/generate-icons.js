@@ -1,57 +1,79 @@
-const fs = require("fs");
-const path = require("path");
+/**
+ * Icon Generator Script
+ *
+ * This script generates application icons in multiple formats and sizes
+ * required by Electron for Windows, macOS, and Linux platforms.
+ *
+ * It uses electron-icon-builder to:
+ * - Create .ico files for Windows
+ * - Create .icns files for macOS
+ * - Create multiple sized PNG files for all platforms
+ *
+ * Usage: node scripts/generate-icons.js
+ *
+ * Requirements:
+ * - A source PNG image at build/icon.png (should be at least 1024x1024 pixels)
+ *
+ * Output:
+ * - Windows ICO file: build/icons/win/icon.ico (copied to build/icon.ico)
+ * - macOS ICNS file: build/icons/mac/icon.icns
+ * - Multiple PNG files in various sizes: build/icons/png/
+ */
+
 const { execSync } = require("child_process");
+const path = require("path");
+const fs = require("fs");
 
-console.log("Installing png-to-ico package...");
+console.log("Installing electron-icon-builder...");
+
 try {
-  execSync("npm install --no-save png-to-ico sharp");
+  // Install electron-icon-builder
+  execSync("npm install --no-save electron-icon-builder");
 
-  // After installation, we can require the package
-  const pngToIco = require("png-to-ico");
-  const sharp = require("sharp");
+  console.log("Creating temporary package.json script...");
 
-  const sourceIcon = path.join(__dirname, "..", "build", "icon.png");
-  const targetIco = path.join(__dirname, "..", "build", "icon.ico");
+  // Read the current package.json
+  const packageJsonPath = path.join(__dirname, "..", "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 
-  // Create array of differently sized PNGs for the ico
-  async function generateIco() {
-    console.log("Generating ICO file with multiple sizes...");
+  // Save original scripts
+  const originalScripts = { ...packageJson.scripts };
 
-    // Temp directory for resized images
-    const tempDir = path.join(__dirname, "..", "temp_icons");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir);
-    }
+  // Add the icon script
+  packageJson.scripts = {
+    ...packageJson.scripts,
+    "generate-icons":
+      "electron-icon-builder --input=./build/icon.png --output=./build",
+  };
 
-    // Sizes to include in the ico file - Windows typically needs these
-    const sizes = [16, 24, 32, 48, 64, 128, 256];
-    const pngFiles = [];
+  // Write modified package.json
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
-    // Generate PNG files of different sizes
-    for (const size of sizes) {
-      const outputPath = path.join(tempDir, `icon-${size}.png`);
-      await sharp(sourceIcon).resize(size, size).toFile(outputPath);
-      pngFiles.push(outputPath);
-    }
+  console.log("Running icon generation...");
+  execSync("npm run generate-icons", { stdio: "inherit" });
 
-    // Convert the PNG files to an ICO file
-    const buffer = await pngToIco(pngFiles);
-    fs.writeFileSync(targetIco, buffer);
+  console.log("Restoring original package.json...");
+  // Restore original scripts
+  packageJson.scripts = originalScripts;
+  fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
-    // Clean up temp files
-    for (const file of pngFiles) {
-      fs.unlinkSync(file);
-    }
-    fs.rmdirSync(tempDir);
+  // Copy the icons to their proper locations
+  console.log("Copying icons to standard locations...");
 
-    console.log("ICO file has been generated successfully!");
-  }
+  // Make sure the ico file is in the build directory
+  fs.copyFileSync(
+    path.join(__dirname, "..", "build", "icons", "win", "icon.ico"),
+    path.join(__dirname, "..", "build", "icon.ico")
+  );
 
-  generateIco().catch((err) => {
-    console.error("Error generating ICO file:", err);
-    process.exit(1);
-  });
+  // Make sure the icns file is in the build directory
+  fs.copyFileSync(
+    path.join(__dirname, "..", "build", "icons", "mac", "icon.icns"),
+    path.join(__dirname, "..", "build", "icon.icns")
+  );
+
+  console.log("Icon generation complete!");
 } catch (err) {
-  console.error("Error installing or running png-to-ico:", err);
+  console.error("Error:", err.message || err);
   process.exit(1);
 }
