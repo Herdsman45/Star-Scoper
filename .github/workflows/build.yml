@@ -39,8 +39,6 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           npx electron-builder --win --x64
-          echo "Listing dist directory contents:"
-          dir dist
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -59,10 +57,12 @@ jobs:
           name: ${{ matrix.os }}-build
           path: |
             dist/*.exe
-            dist/**/*.exe
             dist/*.dmg
             dist/*.zip
             dist/*.AppImage
+          exclude: |
+            dist/**/win-unpacked/**
+            dist/win-unpacked/**
 
   release:
     needs: build
