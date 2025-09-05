@@ -84,7 +84,9 @@ dist-ssr
 *.sw?
 
 # Tesseract temp files
-*.traineddata
+# Note: eng.traineddata is needed for the build
+# *.traineddata
+!eng.traineddata
 
 # Image temp files
 tmp/
