@@ -11,9 +11,8 @@ const captureSlot1Btn = document.getElementById("capture-slot1");
 const captureSlot2Btn = document.getElementById("capture-slot2");
 const statusSlot1 = document.getElementById("status-slot1");
 const statusSlot2 = document.getElementById("status-slot2");
-const hotkeySlot1Input = document.getElementById("hotkey-slot1");
-const hotkeySlot2Input = document.getElementById("hotkey-slot2");
-const saveSettingsBtn = document.getElementById("save-settings");
+const hotkeySlot1Btn = document.getElementById("hotkey-slot1");
+const hotkeySlot2Btn = document.getElementById("hotkey-slot2");
 const regionSelectionOverlay = document.getElementById(
   "region-selection-overlay"
 );
@@ -32,17 +31,8 @@ let resizableBoxes = [];
 // Theme toggle
 const darkModeToggle = document.getElementById("dark-mode-toggle");
 
-// Check for saved theme preference or use preferred color scheme
-const savedTheme = localStorage.getItem("theme");
-if (
-  savedTheme === "dark" ||
-  (!savedTheme &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches)
-) {
-  document.body.classList.add("dark-theme");
-  darkModeToggle.checked = true;
-}
+// Theme will be initialized from electron store when settings are loaded
+// Dark mode preference is now handled by the loadSettings function
 
 // Event listeners
 setSlot1Btn.addEventListener("click", () => setRegions(1));
@@ -55,22 +45,54 @@ copyRawBtn.addEventListener("click", () =>
 copyProcessedBtn.addEventListener("click", () =>
   copyText(processedTextElement.textContent)
 );
-saveSettingsBtn.addEventListener("click", saveSettings);
+// Update darkModeToggle to auto-save when changed
+darkModeToggle.addEventListener("change", async () => {
+  const isDarkTheme = darkModeToggle.checked;
+  document.body.classList.toggle("dark-theme", isDarkTheme);
+  // Save to the Electron store via IPC
+  await ipcRenderer.invoke("save-settings", { darkTheme: isDarkTheme });
+  showToast("Theme preference saved!");
+});
 cancelSelectionBtn.addEventListener("click", cancelRegionSelection);
 saveRegionsBtn.addEventListener("click", saveSelectedRegions);
 
-// Dark mode toggle
-darkModeToggle.addEventListener("change", async () => {
-  if (darkModeToggle.checked) {
-    document.body.classList.add("dark-theme");
-    localStorage.setItem("theme", "dark");
-    await ipcRenderer.invoke("set-theme", true);
-  } else {
-    document.body.classList.remove("dark-theme");
-    localStorage.setItem("theme", "light");
-    await ipcRenderer.invoke("set-theme", false);
+// Add keybinding capture listeners
+hotkeySlot1Btn.addEventListener("click", async () => {
+  hotkeySlot1Btn.textContent = "Recording...";
+  try {
+    const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 1);
+    if (shortcut) {
+      hotkeySlot1Btn.textContent = shortcut;
+    } else {
+      // If user cancelled or no shortcut was selected
+      const settings = await ipcRenderer.invoke("get-settings");
+      hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
+    }
+  } catch (error) {
+    console.error("Error recording keybind:", error);
+    hotkeySlot1Btn.textContent = "Error - Click to retry";
   }
 });
+
+hotkeySlot2Btn.addEventListener("click", async () => {
+  hotkeySlot2Btn.textContent = "Recording...";
+  try {
+    const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 2);
+    if (shortcut) {
+      hotkeySlot2Btn.textContent = shortcut;
+    } else {
+      // If user cancelled or no shortcut was selected
+      const settings = await ipcRenderer.invoke("get-settings");
+      hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
+    }
+  } catch (error) {
+    console.error("Error recording keybind:", error);
+    hotkeySlot2Btn.textContent = "Error - Click to retry";
+  }
+});
+
+// This dark mode toggle function was removed because we have a newer implementation
+// that auto-saves the theme preference (see the event listener around line 58)
 
 // Debug mode toggle
 debugModeCheckbox.addEventListener("change", async () => {
@@ -142,24 +164,14 @@ function copyText(text) {
   showToast("Copied to clipboard!");
 }
 
-// Save settings
-async function saveSettings() {
-  const settings = {
-    hotkey1: hotkeySlot1Input.value,
-    hotkey2: hotkeySlot2Input.value,
-    darkTheme: darkModeToggle.checked,
-  };
-
-  await ipcRenderer.invoke("save-settings", settings);
-  showToast("Settings saved!");
-}
+// Settings are now saved automatically when changed
 
 // Load settings
 async function loadSettings() {
   const settings = await ipcRenderer.invoke("get-settings");
 
-  hotkeySlot1Input.value = settings.hotkey1;
-  hotkeySlot2Input.value = settings.hotkey2;
+  hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
+  hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
 
   // Set theme based on stored preference (this runs after the initial check)
   if (settings.darkTheme) {

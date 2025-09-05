@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="debug-toggle.css" />
     <link rel="stylesheet" href="star-call-styles.css" />
     <link rel="stylesheet" href="dark-theme.css" />
+    <link rel="stylesheet" href="keybind-styles.css" />
   </head>
   <body>
     <!-- Theme toggle -->
@@ -34,14 +35,14 @@
           <div class="slot">
             <h3>Slot 1</h3>
             <button id="set-slot1">Set Regions</button>
-            <button id="capture-slot1">Capture (F13)</button>
+            <button id="capture-slot1">Capture</button>
             <div class="status" id="status-slot1"></div>
           </div>
 
           <div class="slot">
             <h3>Slot 2</h3>
             <button id="set-slot2">Set Regions</button>
-            <button id="capture-slot2">Capture (F14)</button>
+            <button id="capture-slot2">Capture</button>
             <div class="status" id="status-slot2"></div>
           </div>
         </div>
@@ -83,17 +84,23 @@
         <h2>Settings</h2>
         <div class="settings-grid">
           <div class="setting">
-            <label for="hotkey-slot1">Slot 1 Hotkey:</label>
-            <input type="text" id="hotkey-slot1" value="F13" />
+            <label for="hotkey-slot1">Slot 1 Keybind:</label>
+            <button id="hotkey-slot1" class="keybind-button">
+              Click to set
+            </button>
           </div>
 
           <div class="setting">
-            <label for="hotkey-slot2">Slot 2 Hotkey:</label>
-            <input type="text" id="hotkey-slot2" value="F14" />
+            <label for="hotkey-slot2">Slot 2 Keybind:</label>
+            <button id="hotkey-slot2" class="keybind-button">
+              Click to set
+            </button>
           </div>
         </div>
 
-        <button id="save-settings">Save Settings</button>
+        <p class="info-text">
+          All settings are automatically saved when changed
+        </p>
       </div>
     </div>
 

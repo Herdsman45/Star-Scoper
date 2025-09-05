@@ -71,36 +71,87 @@ async function createWindow() {
   }
 
   // Register global capture hotkeys with platform-specific defaults
-  const isMac = process.platform === 'darwin';
-  const defaultHotkey1 = isMac ? "Command+F1" : "F13";
-  const defaultHotkey2 = isMac ? "Command+F2" : "F14";
-  
-  const hotkey1 = store.get("hotkey1", defaultHotkey1);
-  const hotkey2 = store.get("hotkey2", defaultHotkey2);
+  registerHotkeys();
+}
+
+// Function to register hotkeys
+function registerHotkeys() {
+  // Unregister any existing shortcuts first
+  globalShortcut.unregisterAll();
+
+  const isMac = process.platform === "darwin";
+  const defaultHotkey1 = isMac ? "Command+F1" : "Alt+Shift+1";
+  const defaultHotkey2 = isMac ? "Command+F2" : "Alt+Shift+2";
+
+  // Get saved hotkeys from store
+  let hotkey1 = store.get("hotkey1", defaultHotkey1);
+  let hotkey2 = store.get("hotkey2", defaultHotkey2);
+
+  // Clean up any placeholder/UI text values that might have been saved
+  const invalidValues = [
+    "Click to set",
+    "Recording...",
+    "Error - Click to retry",
+  ];
+  if (invalidValues.includes(hotkey1)) hotkey1 = defaultHotkey1;
+  if (invalidValues.includes(hotkey2)) hotkey2 = defaultHotkey2;
 
   try {
-    globalShortcut.register(hotkey1, () => {
-      if (!isCapturing) captureAndProcess(1);
-    });
-    
-    globalShortcut.register(hotkey2, () => {
-      if (!isCapturing) captureAndProcess(2);
-    });
-    
-    console.log("Hotkeys registered successfully:", hotkey1, hotkey2);
+    // Helper function to check if a shortcut is valid
+    const isValidShortcut = (shortcut) => {
+      // Check if the shortcut is a non-empty string and not a placeholder
+      return (
+        typeof shortcut === "string" &&
+        shortcut.trim() !== "" &&
+        !["Click to set", "Recording...", "Error - Click to retry"].includes(
+          shortcut
+        )
+      );
+    };
+
+    // Register for slot 1
+    if (isValidShortcut(hotkey1)) {
+      console.log("Attempting to register hotkey for Slot 1:", hotkey1);
+      globalShortcut.register(hotkey1, () => {
+        if (!isCapturing) captureAndProcess(1);
+      });
+      console.log("Registered hotkey for Slot 1:", hotkey1);
+    } else {
+      console.log("Skipping invalid hotkey1:", hotkey1);
+    }
+
+    // Register for slot 2
+    if (isValidShortcut(hotkey2)) {
+      console.log("Attempting to register hotkey for Slot 2:", hotkey2);
+      globalShortcut.register(hotkey2, () => {
+        if (!isCapturing) captureAndProcess(2);
+      });
+      console.log("Registered hotkey for Slot 2:", hotkey2);
+    } else {
+      console.log("Skipping invalid hotkey2:", hotkey2);
+    }
   } catch (error) {
     console.error("Failed to register hotkeys:", error);
-    // Fallback to alternative hotkeys if needed
-    if (!globalShortcut.isRegistered(hotkey1)) {
-      const fallbackKey1 = isMac ? "Alt+F1" : "Alt+1";
-      try {
+    // Try fallback hotkeys
+    try {
+      const fallbackKey1 = isMac ? "Alt+1" : "Alt+1";
+      const fallbackKey2 = isMac ? "Alt+2" : "Alt+2";
+
+      if (!hotkey1 || !globalShortcut.isRegistered(hotkey1)) {
         globalShortcut.register(fallbackKey1, () => {
           if (!isCapturing) captureAndProcess(1);
         });
         console.log("Using fallback hotkey for Slot 1:", fallbackKey1);
-      } catch (e) {
-        console.error("Failed to register fallback hotkey:", e);
       }
+
+      if (!hotkey2 || !globalShortcut.isRegistered(hotkey2)) {
+        globalShortcut.register(fallbackKey2, () => {
+          if (!isCapturing) captureAndProcess(2);
+        });
+        console.log("Using fallback hotkey for Slot 2:", fallbackKey2);
+      }
+    } catch (e) {
+      console.error("Failed to register fallback hotkeys:", e);
     }
   }
 }
@@ -790,7 +841,7 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
   const screenshotDataUrl = targetSource.thumbnail.toDataURL();
 
   // Platform-specific full screen handling
-  if (process.platform === 'darwin') {
+  if (process.platform === "darwin") {
     // On macOS, we use simpleFullscreen to avoid the green button animation
     mainWindow.setSimpleFullScreen(true);
   } else {
@@ -901,30 +952,23 @@ ipcMain.handle("set-debug-mode", async (event, enabled) => {
   return { success: true };
 });
 
-// Set theme
-ipcMain.handle("set-theme", async (event, isDark) => {
-  store.set("darkTheme", isDark);
-  return { success: true };
-});
+// This handler is no longer used as theme changes are now handled via save-settings
+// ipcMain.handle("set-theme", async (event, isDark) => {
+//   store.set("darkTheme", isDark);
+//   return { success: true };
+// });
 
 // Save settings
 ipcMain.handle("save-settings", async (event, settings) => {
-  store.set("hotkey1", settings.hotkey1);
-  store.set("hotkey2", settings.hotkey2);
+  // Now we only save the theme setting as hotkeys are saved directly when set
   if (settings.darkTheme !== undefined) {
-    store.set("darkTheme", settings.darkTheme);
+    // Check if the theme is actually different from what's stored
+    const currentTheme = store.get("darkTheme", false);
+    if (currentTheme !== settings.darkTheme) {
+      store.set("darkTheme", settings.darkTheme);
+      console.log("Saved dark theme preference:", settings.darkTheme);
+    }
   }
-
-  // Re-register hotkeys if they've changed
-  globalShortcut.unregisterAll();
-
-  globalShortcut.register(settings.hotkey1, () => {
-    if (!isCapturing) captureAndProcess(1);
-  });
-
-  globalShortcut.register(settings.hotkey2, () => {
-    if (!isCapturing) captureAndProcess(2);
-  });
 
   return { success: true };
 });
@@ -938,28 +982,160 @@ ipcMain.on("open-debug-folder", (event, folderPath) => {
   shell.openPath(folderPath);
 });
 
+// Handle keyboard shortcut recording
+ipcMain.handle("get-keyboard-shortcut", (event, slotNumber) => {
+  return new Promise((resolve) => {
+    let shortcutResult = null;
+
+    // Create a small window for capturing key presses
+    const keyRecordingWindow = new BrowserWindow({
+      width: 400,
+      height: 250,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      parent: mainWindow,
+      modal: true,
+      title: `Record Keyboard Shortcut for Slot ${slotNumber}`,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        preload: path.join(__dirname, "preload.js"),
+        webSecurity: true,
+      },
+    });
+
+    keyRecordingWindow.setMenuBarVisibility(false);
+
+    // Set CSP for the window to allow our script
+    keyRecordingWindow.webContents.session.webRequest.onHeadersReceived(
+      (details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            "Content-Security-Policy": ["script-src 'self'"],
+          },
+        });
+      }
+    );
+
+    // Set up IPC handlers for the key window
+    const keybindSaveHandler = (event, shortcut) => {
+      console.log("Received keybind-save with shortcut:", shortcut);
+      shortcutResult = shortcut;
+
+      // Save the shortcut to persistent storage
+      if (shortcut) {
+        // Store the keybinding based on slot number
+        if (slotNumber === 1) {
+          // Validate the shortcut format - make sure it's an actual key shortcut
+          if (
+            shortcut &&
+            typeof shortcut === "string" &&
+            ![
+              "Click to set",
+              "Recording...",
+              "Error - Click to retry",
+            ].includes(shortcut)
+          ) {
+            store.set("hotkey1", shortcut);
+            console.log("Saved hotkey1:", shortcut);
+          } else {
+            console.error("Invalid shortcut format for slot 1:", shortcut);
+          }
+        } else if (slotNumber === 2) {
+          // Validate the shortcut format - make sure it's an actual key shortcut
+          if (
+            shortcut &&
+            typeof shortcut === "string" &&
+            ![
+              "Click to set",
+              "Recording...",
+              "Error - Click to retry",
+            ].includes(shortcut)
+          ) {
+            store.set("hotkey2", shortcut);
+            console.log("Saved hotkey2:", shortcut);
+          } else {
+            console.error("Invalid shortcut format for slot 2:", shortcut);
+          }
+        }
+
+        // Re-register the hotkeys to apply the change immediately
+        registerHotkeys();
+      }
+
+      if (!keyRecordingWindow.isDestroyed()) {
+        keyRecordingWindow.close();
+      }
+    };
+
+    const keybindCancelHandler = () => {
+      console.log("Received keybind-cancel");
+      shortcutResult = null;
+      if (!keyRecordingWindow.isDestroyed()) {
+        keyRecordingWindow.close();
+      }
+    };
+
+    // Register handlers
+    ipcMain.on("keybind-save", keybindSaveHandler);
+    ipcMain.on("keybind-cancel", keybindCancelHandler);
+
+    // Get current theme preference
+    const isDarkTheme = store.get("darkTheme", false);
+
+    // Set up theme handler for the keybind window
+    ipcMain.on("get-theme-preference", (event) => {
+      console.log("Sending theme preference:", isDarkTheme);
+      event.sender.send("theme-preference", isDarkTheme);
+    });
+
+    // Load the HTML file for keybinding
+    keyRecordingWindow.loadFile("keybind.html");
+
+    // DevTools code commented out - no longer needed
+    // if (process.env.DEBUG) {
+    //   keyRecordingWindow.webContents.openDevTools({ mode: "detach" });
+    // }
+
+    keyRecordingWindow.once("closed", () => {
+      // Clean up IPC handlers
+      ipcMain.removeListener("keybind-save", keybindSaveHandler);
+      ipcMain.removeListener("keybind-cancel", keybindCancelHandler);
+
+      // Also cleanup the theme preference handler
+      ipcMain.removeAllListeners("get-theme-preference");
+
+      console.log("Keybind window closed, resolving with:", shortcutResult);
+      // Resolve with our stored result
+      resolve(shortcutResult);
+    });
+  });
+});
+
 // App lifecycle
 app.whenReady().then(() => {
   createWindow();
-  
+
   // On macOS, check for screen capture permissions
-  if (process.platform === 'darwin') {
-    const { systemPreferences } = require('electron');
-    const hasScreenCapturePermission = systemPreferences.getMediaAccessStatus('screen');
-    
-    if (hasScreenCapturePermission !== 'granted') {
-      console.log('Requesting screen recording permission...');
+  if (process.platform === "darwin") {
+    const { systemPreferences } = require("electron");
+    const hasScreenCapturePermission =
+      systemPreferences.getMediaAccessStatus("screen");
+
+    if (hasScreenCapturePermission !== "granted") {
+      console.log("Requesting screen recording permission...");
       // This will prompt the user for screen recording permission
-      systemPreferences.askForMediaAccess('screen')
-        .then((granted) => {
-          if (!granted) {
-            // Inform the user that screen capture permissions are needed
-            mainWindow.webContents.send(
-              "status-update",
-              "Screen recording permission is required. Please enable it in System Preferences > Security & Privacy > Privacy > Screen Recording."
-            );
-          }
-        });
+      systemPreferences.askForMediaAccess("screen").then((granted) => {
+        if (!granted) {
+          // Inform the user that screen capture permissions are needed
+          mainWindow.webContents.send(
+            "status-update",
+            "Screen recording permission is required. Please enable it in System Preferences > Security & Privacy > Privacy > Screen Recording."
+          );
+        }
+      });
     }
   }
 });
@@ -971,7 +1147,7 @@ app.on("window-all-closed", () => {
 app.on("will-quit", () => {
   // Unregister all shortcuts
   globalShortcut.unregisterAll();
-  
+
   // Clean up OCR worker
   if (ocrWorker) {
     ocrWorker.terminate();

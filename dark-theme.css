@@ -38,6 +38,11 @@ body.dark-theme {
   color: #8cb0d9;
 }
 
+/* Info text */
+.dark-theme .info-text {
+  color: #a0a0a0;
+}
+
 /* Result boxes */
 .dark-theme .result-box {
   background-color: #252525;
@@ -74,6 +79,17 @@ body.dark-theme {
   background-color: #252525;
   border: 1px solid #3d3d3d;
   color: #e0e0e0;
+}
+
+/* Keybind buttons */
+.dark-theme .keybind-button {
+  background-color: #252525;
+  border: 1px solid #3d3d3d;
+  color: #e0e0e0;
+}
+
+.dark-theme .keybind-button:hover {
+  background-color: #333333;
 }
 
 /* Slots */

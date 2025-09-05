@@ -28,6 +28,14 @@ h1 {
 h2 {
   margin-top: 0;
   color: #2c3e50;
+}
+
+.info-text {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  margin-top: 15px;
   border-bottom: 1px solid #eee;
   padding-bottom: 10px;
 }
