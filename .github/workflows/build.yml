@@ -56,13 +56,11 @@ jobs:
         with:
           name: ${{ matrix.os }}-build
           path: |
-            dist/*.exe
+            dist/*Setup*.exe
+            dist/*Portable*.exe
             dist/*.dmg
             dist/*.zip
             dist/*.AppImage
-          exclude: |
-            dist/**/win-unpacked/**
-            dist/win-unpacked/**
 
   release:
     needs: build
