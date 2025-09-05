@@ -56,8 +56,13 @@ typings/
 
 # Build directory
 dist/
-build/
 out/
+# Keep the build directory but ignore some specific files
+# Ignore everything in build except these specific files
+/build/*
+!/build/icon.*
+!/build/entitlements.mac.plist
+!/build/README.md
 
 # Electron specific
 .DS_Store

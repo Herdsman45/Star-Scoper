@@ -6,10 +6,15 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "node scripts/dev-helper.js clean",
     "check": "node scripts/dev-helper.js check",
-    "prepare-release": "node scripts/dev-helper.js prepare-release"
+    "prepare-release": "node scripts/dev-helper.js prepare-release",
+    "release": "npm run clean && npm run check && npm run build"
   },
   "author": "StarScopeOCR Team",
   "license": "MIT",

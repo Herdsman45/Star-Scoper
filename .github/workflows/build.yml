@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - "v*" # Will trigger when you push a tag like v1.0.0
+    branches:
+      - main # Also build on main branch pushes for testing
 
 jobs:
   build:
@@ -15,15 +17,16 @@ jobs:
 
     steps:
       - name: Check out Git repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Node.js
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v3
         with:
-          node-version: 16
+          node-version: 18
+          cache: "npm"
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # For macOS, install Tesseract language data
       - name: Install macOS dependencies
@@ -49,13 +52,14 @@ jobs:
 
       # Upload artifacts
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}-build
           path: |
             dist/*.exe
             dist/*.dmg
             dist/*.zip
+            dist/*.AppImage
 
   release:
     needs: build
@@ -64,7 +68,7 @@ jobs:
 
     steps:
       - name: Download artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           path: artifacts
 
@@ -72,5 +76,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: artifacts/**/*
+          generate_release_notes: true
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
