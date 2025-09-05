@@ -26,6 +26,7 @@ async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 700,
+    autoHideMenuBar: true, // Hides the menu bar but allows showing with Alt key
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: true,
@@ -34,6 +35,9 @@ async function createWindow() {
       allowRunningInsecureContent: false,
     },
   });
+
+  // Hide the menu bar by default
+  mainWindow.setMenuBarVisibility(false);
 
   // Set CSP headers
   mainWindow.webContents.session.webRequest.onHeadersReceived(
