@@ -18,8 +18,18 @@ const store = new Store();
 
 // Global state
 let mainWindow;
+let widgetWindow = null;
+let lastWidgetCall = "";
 let ocrWorker;
 let isCapturing = false;
+
+// Forward output call to widget
+function updateWidgetCall(callText) {
+  lastWidgetCall = callText;
+  if (widgetWindow && !widgetWindow.isDestroyed()) {
+    widgetWindow.webContents.send("widget-call-update", callText);
+  }
+}
 
 // Initialize app
 async function createWindow() {
@@ -35,6 +45,23 @@ async function createWindow() {
       webSecurity: true,
       allowRunningInsecureContent: false,
     },
+  });
+
+  // Listen for widget open request from renderer
+  ipcMain.on("open-widget", () => {
+    openWidgetWindow();
+  });
+  ipcMain.on("widget-close", () => {
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.close();
+    }
+  });
+
+  // Close widget if main window is closed
+  mainWindow.on("close", () => {
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.close();
+    }
   });
 
   // Hide the menu bar by default
@@ -56,6 +83,71 @@ async function createWindow() {
 
   // Load the UI
   mainWindow.loadFile("index.html");
+
+  // Optionally, inject a button into the main window to open the widget
+  mainWindow.webContents.on("did-finish-load", () => {
+    mainWindow.webContents.send("show-widget-button");
+  });
+  // Create the always-on-top widget window
+  function openWidgetWindow() {
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.focus();
+      return;
+    }
+
+    // Get the main window's position to place widget on the same monitor
+    let mainPos = mainWindow.getPosition();
+    let mainSize = mainWindow.getSize();
+
+    // Position the widget on the same screen as the main window
+    // Center it horizontally relative to main window, place near the top
+    const xPos = Math.floor(mainPos[0] + (mainSize[0] - 360) / 2);
+    const yPos = mainPos[1] + 50; // Position it near the top of the main window
+
+    widgetWindow = new BrowserWindow({
+      width: 360,
+      height: 170, // Back to original height as requested
+      x: xPos,
+      y: yPos,
+      alwaysOnTop: true,
+      frame: true, // Use native frame with title bar
+      title: "Star Scoper Widget",
+      skipTaskbar: true,
+      resizable: false,
+      minimizable: true,
+      maximizable: false,
+      autoHideMenuBar: true, // Hide menu bar
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    });
+    widgetWindow.loadFile("widget.html");
+
+    // Hide menu bar by default
+    widgetWindow.setMenuBarVisibility(false);
+    widgetWindow.on("closed", () => {
+      widgetWindow = null;
+      // Notify the main window that the widget was closed
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("widget-closed");
+      }
+    });
+    // Send the last call if available
+    if (lastWidgetCall) {
+      widgetWindow.webContents.on("did-finish-load", () => {
+        widgetWindow.webContents.send("widget-call-update", lastWidgetCall);
+      });
+    }
+  }
+
+  // IPC from widget window
+  ipcMain.on("widget-capture", (event, slot) => {
+    if (!isCapturing) captureAndProcess(slot);
+  });
+  ipcMain.on("widget-close", () => {
+    if (widgetWindow) widgetWindow.close();
+  });
 
   // Initialize OCR engine
   try {
@@ -769,6 +861,8 @@ async function captureAndProcess(slotNumber) {
       // Process text using the processing module
       const { processText, formatForDiscord } = require("./lib/processing");
       processedText = formatForDiscord(rawText);
+      // Send to widget if open
+      updateWidgetCall(processedText);
     } catch (error) {
       console.error("[DEBUG] Error during image processing or OCR:", error);
       throw error;
