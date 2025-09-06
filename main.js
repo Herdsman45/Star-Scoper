@@ -456,8 +456,33 @@ async function captureAndProcess(slotNumber) {
       }
 
       console.log("[DEBUG] About to recognize regionA with Tesseract");
-      ocrA = await ocrWorker.recognize(croppedA);
-      console.log("[DEBUG] RegionA recognized successfully");
+
+      // Set optimal parameters for telescope text in regionA
+      // This region contains information about size, location, time, etc.
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist:
+          "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .!",
+        // Only include essential characters to avoid false positives in background noise
+      });
+
+      try {
+        ocrA = await ocrWorker.recognize(croppedA);
+        console.log(
+          "[DEBUG] RegionA recognized successfully with optimal settings"
+        );
+      } catch (error) {
+        console.error("[DEBUG] Error with OCR for regionA:", error);
+
+        // Fallback to default settings if the optimized approach fails
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist: "", // Clear whitelist for default settings
+        });
+
+        ocrA = await ocrWorker.recognize(croppedA);
+        console.log(
+          "[DEBUG] RegionA recognized with fallback default settings"
+        );
+      }
 
       // Normalize coordinates for regionB
       const normalizedB = {
@@ -704,32 +729,35 @@ async function captureAndProcess(slotNumber) {
 
       console.log("[DEBUG] About to recognize regionB with Tesseract");
 
-      // Use simple OCR parameters for World Line numbers
+      // Set optimal parameters for world line text (RuneScape XX)
+      // Include all characters needed with spaces to ensure proper recognition
+      await ocrWorker.setParameters({
+        tessedit_char_whitelist:
+          "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ",
+        // Add space character to allow "RuneScape XX" format
+      });
+
       try {
-        // Just set a character whitelist for digits and symbols
+        // Perform OCR once with the optimal settings
+        ocrB = await ocrWorker.recognize(croppedB);
+        console.log(
+          "[DEBUG] RegionB recognized successfully with optimal settings"
+        );
+      } catch (error) {
+        console.error("[DEBUG] Error with OCR for regionB:", error);
+
+        // Fallback to default settings if the optimized approach fails
         await ocrWorker.setParameters({
-          tessedit_char_whitelist: "0123456789.%-",
+          tessedit_char_whitelist: "", // Clear whitelist to use default settings
         });
 
         ocrB = await ocrWorker.recognize(croppedB);
-        console.log("[DEBUG] RegionB recognized successfully");
-      } catch (error) {
-        console.error("[DEBUG] Error with OCR for regionB:", error);
-        // Try without parameters
-        ocrB = await ocrWorker.recognize(croppedB);
-        console.log("[DEBUG] RegionB recognized with default settings");
+        console.log(
+          "[DEBUG] RegionB recognized with fallback default settings"
+        );
       }
 
-      // Use simple character whitelist for world line text
-      await ocrWorker.setParameters({
-        tessedit_char_whitelist:
-          "0123456789.%-ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", // Include letters for any text
-      });
-
-      ocrB = await ocrWorker.recognize(croppedB);
-      console.log("[DEBUG] RegionB recognized successfully");
-
-      // Reset whitelist for future OCR operations
+      // Reset whitelist for future OCR operations to avoid affecting other recognition tasks
       await ocrWorker.setParameters({
         tessedit_char_whitelist: "",
       });
