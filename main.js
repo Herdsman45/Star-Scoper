@@ -91,6 +91,7 @@ async function createWindow() {
   // Create the always-on-top widget window
   function openWidgetWindow() {
     if (widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.setAlwaysOnTop(true); // Re-assert always-on-top in case it was lost
       widgetWindow.focus();
       return;
     }
@@ -416,23 +417,12 @@ async function captureAndProcess(slotNumber) {
 
       console.log(`[DEBUG] Resized regionA (${scaleFactor}x) for better OCR`);
 
-      // Save debug image for regionA if debug mode is enabled
-      if (debugMode && debugDir) {
-        const debugPathA = path.join(debugDir, `region_A_${Date.now()}.png`);
-        fs.writeFileSync(debugPathA, croppedA);
-        console.log(`[DEBUG] Saved regionA image to ${debugPathA}`);
-      }
-
+      // OCR for regionA
       console.log("[DEBUG] About to recognize regionA with Tesseract");
-
-      // Set optimal parameters for telescope text in regionA
-      // This region contains information about size, location, time, etc.
       await ocrWorker.setParameters({
         tessedit_char_whitelist:
           "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz .!",
-        // Only include essential characters to avoid false positives in background noise
       });
-
       try {
         ocrA = await ocrWorker.recognize(croppedA);
         console.log(
@@ -440,19 +430,14 @@ async function captureAndProcess(slotNumber) {
         );
       } catch (error) {
         console.error("[DEBUG] Error with OCR for regionA:", error);
-
-        // Fallback to default settings if the optimized approach fails
-        await ocrWorker.setParameters({
-          tessedit_char_whitelist: "", // Clear whitelist for default settings
-        });
-
+        await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
         ocrA = await ocrWorker.recognize(croppedA);
         console.log(
           "[DEBUG] RegionA recognized with fallback default settings"
         );
       }
 
-      // Normalize coordinates for regionB
+      // OCR for regionB
       const normalizedB = {
         left: Math.floor(Math.abs(regions.regionB.x)),
         top: Math.floor(Math.abs(regions.regionB.y)),
@@ -463,16 +448,8 @@ async function captureAndProcess(slotNumber) {
         `[DEBUG] Extracting regionB with coords:`,
         JSON.stringify(normalizedB)
       );
-
-      // Crop and OCR regionB
-      // For the World Line region, apply simple resizing
       let croppedB;
-
-      // Simple resize for region B (World Line)
-      // Using the scale factor defined earlier
-
       try {
-        // Extract and resize with simple processing
         croppedB = await image
           .clone()
           .extract(normalizedB)
@@ -483,65 +460,85 @@ async function captureAndProcess(slotNumber) {
           })
           .png()
           .toBuffer();
-
         console.log(`[DEBUG] Resized regionB (${scaleFactor}x) for better OCR`);
       } catch (err) {
-        // Fallback in case of error with advanced processing
         console.error("[DEBUG] Error in advanced image processing:", err);
         croppedB = await image.clone().extract(normalizedB).png().toBuffer();
       }
-
-      // Save debug image for regionB if debug mode is enabled
-      if (debugMode && debugDir) {
-        const debugPathB = path.join(debugDir, `region_B_${Date.now()}.png`);
-        fs.writeFileSync(debugPathB, croppedB);
-        console.log(`[DEBUG] Saved regionB image to ${debugPathB}`);
-      }
-
       console.log("[DEBUG] About to recognize regionB with Tesseract");
-
-      // Set optimal parameters for world line text (RuneScape XX)
-      // Include all characters needed with spaces to ensure proper recognition
       await ocrWorker.setParameters({
         tessedit_char_whitelist:
           "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz ",
-        // Add space character to allow "RuneScape XX" format
       });
-
       try {
-        // Perform OCR once with the optimal settings
         ocrB = await ocrWorker.recognize(croppedB);
         console.log(
           "[DEBUG] RegionB recognized successfully with optimal settings"
         );
       } catch (error) {
         console.error("[DEBUG] Error with OCR for regionB:", error);
-
-        // Fallback to default settings if the optimized approach fails
-        await ocrWorker.setParameters({
-          tessedit_char_whitelist: "", // Clear whitelist to use default settings
-        });
-
+        await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
         ocrB = await ocrWorker.recognize(croppedB);
         console.log(
           "[DEBUG] RegionB recognized with fallback default settings"
         );
       }
+      await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
 
-      // Reset whitelist for future OCR operations to avoid affecting other recognition tasks
-      await ocrWorker.setParameters({
-        tessedit_char_whitelist: "",
-      });
-
-      // Combine raw text - access properties correctly for Tesseract.js v4
+      // Combine raw text
       rawText = `Region A:\n${ocrA.data.text}\n\nRegion B:\n${ocrB.data.text}`;
       console.log("[DEBUG] Raw OCR text:", rawText);
 
-      // Process text using the processing module
+      // Process text
       const { processText, formatForDiscord } = require("./lib/processing");
       processedText = formatForDiscord(rawText);
-      // Send to widget if open
       updateWidgetCall(processedText);
+
+      // Save debug images for regionA and regionB with metadata after processedText is available
+      if (debugMode && debugDir) {
+        const { embedMetadataInPng } = require("./lib/embed-metadata");
+        const captureTime = Math.floor(Date.now() / 1000);
+        // RegionA
+        const debugPathA = path.join(debugDir, `region_A_${Date.now()}.png`);
+        const metadataA = {
+          raw_ocr: ocrA && ocrA.data && ocrA.data.text ? ocrA.data.text : "",
+          processed_ocr: processedText || "",
+          capture_time_utc: captureTime,
+        };
+        try {
+          const pngWithMetaA = await embedMetadataInPng(croppedA, metadataA);
+          fs.writeFileSync(debugPathA, pngWithMetaA);
+          console.log(
+            `[DEBUG] Saved regionA image with metadata to ${debugPathA}`
+          );
+        } catch (err) {
+          fs.writeFileSync(debugPathA, croppedA);
+          console.error(
+            "[DEBUG] Failed to embed metadata in regionA PNG:",
+            err
+          );
+        }
+        // RegionB
+        const debugPathB = path.join(debugDir, `region_B_${Date.now()}.png`);
+        const metadataB = {
+          raw_ocr: ocrB && ocrB.data && ocrB.data.text ? ocrB.data.text : "",
+          processed_ocr: processedText || "",
+          capture_time_utc: captureTime,
+        };
+        try {
+          const pngWithMetaB = await embedMetadataInPng(croppedB, metadataB);
+          fs.writeFileSync(debugPathB, pngWithMetaB);
+          console.log(
+            `[DEBUG] Saved regionB image with metadata to ${debugPathB}`
+          );
+        } catch (err) {
+          fs.writeFileSync(debugPathB, croppedB);
+          console.error(
+            "[DEBUG] Failed to embed metadata in regionB PNG:",
+            err
+          );
+        }
+      }
     } catch (error) {
       console.error("[DEBUG] Error during image processing or OCR:", error);
       throw error;
