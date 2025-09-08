@@ -151,18 +151,15 @@ async function createWindow() {
 
   // Initialize OCR engine
   try {
-    // Proper initialization for Tesseract.js v4.0.0
-    ocrWorker = await createWorker({
+    // Updated initialization for Tesseract.js v5.0.0
+    ocrWorker = await createWorker("eng", 1, {
       logger: (progress) => {
         if (progress.status === "recognizing text" && progress.progress === 1) {
           console.log("OCR recognition complete");
         }
       },
     });
-    // Need to load language explicitly for v4.0.0
-    await ocrWorker.loadLanguage("eng");
-    await ocrWorker.initialize("eng");
-    console.log("OCR worker initialized");
+    console.log("OCR worker initialized with Tesseract.js v5");
   } catch (error) {
     console.error("OCR initialization failed:", error);
   }
