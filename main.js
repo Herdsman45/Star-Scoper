@@ -385,7 +385,11 @@ async function captureAndProcess(slotNumber) {
     }
 
     // Declare variables outside the try block to make them accessible throughout the function
-    let ocrA, ocrB, rawText, processedText;
+    let ocrA,
+      ocrB,
+      rawText,
+      processedText,
+      debugImageInfo = null;
 
     try {
       // Normalize coordinates for regionA
@@ -495,11 +499,17 @@ async function captureAndProcess(slotNumber) {
       updateWidgetCall(processedText);
 
       // Save debug images for regionA and regionB with metadata after processedText is available
+      let debugImageInfo = null;
       if (debugMode && debugDir) {
         const { embedMetadataInPng } = require("./lib/embed-metadata");
         const captureTime = Math.floor(Date.now() / 1000);
+        // Use a single timestamp for both images for pairing
+        const debugTimestamp = Date.now();
         // RegionA
-        const debugPathA = path.join(debugDir, `region_A_${Date.now()}.png`);
+        const debugPathA = path.join(
+          debugDir,
+          `region_A_${debugTimestamp}.png`
+        );
         const metadataA = {
           raw_ocr: ocrA && ocrA.data && ocrA.data.text ? ocrA.data.text : "",
           processed_ocr: processedText || "",
@@ -519,7 +529,10 @@ async function captureAndProcess(slotNumber) {
           );
         }
         // RegionB
-        const debugPathB = path.join(debugDir, `region_B_${Date.now()}.png`);
+        const debugPathB = path.join(
+          debugDir,
+          `region_B_${debugTimestamp}.png`
+        );
         const metadataB = {
           raw_ocr: ocrB && ocrB.data && ocrB.data.text ? ocrB.data.text : "",
           processed_ocr: processedText || "",
@@ -538,6 +551,14 @@ async function captureAndProcess(slotNumber) {
             err
           );
         }
+        debugImageInfo = {
+          debugDir: debugDir,
+          regionA: `region_A_${debugTimestamp}.png`,
+          regionB: `region_B_${debugTimestamp}.png`,
+          timestamp: debugTimestamp,
+        };
+        // Notify renderer that debug images are saved and ready
+        mainWindow.webContents.send("debug-images-saved", debugImageInfo);
       }
     } catch (error) {
       console.error("[DEBUG] Error during image processing or OCR:", error);
@@ -548,14 +569,17 @@ async function captureAndProcess(slotNumber) {
     clipboard.writeText(processedText);
 
     // Send back to renderer along with debug image location (if debug mode enabled)
-    if (debugMode && debugDir) {
+    // Always send ocr-result for text, but only send debugDir if debug images are confirmed saved
+    if (debugMode && debugDir && debugImageInfo) {
       mainWindow.webContents.send("ocr-result", {
         raw: rawText,
         processed: processedText,
         slot: slotNumber,
         debugDir: debugDir,
+        regionA: debugImageInfo.regionA,
+        regionB: debugImageInfo.regionB,
+        timestamp: debugImageInfo.timestamp,
       });
-
       // Show notification about debug images
       mainWindow.webContents.send(
         "status-update",

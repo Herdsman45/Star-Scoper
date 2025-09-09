@@ -34,91 +34,75 @@ const darkModeToggle = document.getElementById("dark-mode-toggle");
 // Theme will be initialized from electron store when settings are loaded
 // Dark mode preference is now handled by the loadSettings function
 
-// Event listeners
-setSlot1Btn.addEventListener("click", () => setRegions(1));
-setSlot2Btn.addEventListener("click", () => setRegions(2));
-captureSlot1Btn.addEventListener("click", () => captureSlot(1));
-captureSlot2Btn.addEventListener("click", () => captureSlot(2));
-copyRawBtn.addEventListener("click", () =>
-  copyText(rawTextElement.textContent)
-);
-copyProcessedBtn.addEventListener("click", () =>
-  copyText(processedTextElement.textContent)
-);
-// Update darkModeToggle to auto-save when changed
-darkModeToggle.addEventListener("change", async () => {
-  const isDarkTheme = darkModeToggle.checked;
-  document.body.classList.toggle("dark-theme", isDarkTheme);
-  // Save to the Electron store via IPC
-  await ipcRenderer.invoke("save-settings", { darkTheme: isDarkTheme });
-  showToast("Theme preference saved!");
-});
-cancelSelectionBtn.addEventListener("click", cancelRegionSelection);
-saveRegionsBtn.addEventListener("click", saveSelectedRegions);
-
-// Add keybinding capture listeners
-hotkeySlot1Btn.addEventListener("click", async () => {
-  hotkeySlot1Btn.textContent = "Recording...";
-  try {
-    const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 1);
-    if (shortcut) {
-      hotkeySlot1Btn.textContent = shortcut;
-    } else {
-      // If user cancelled or no shortcut was selected
-      const settings = await ipcRenderer.invoke("get-settings");
-      hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
-    }
-  } catch (error) {
-    console.error("Error recording keybind:", error);
-    hotkeySlot1Btn.textContent = "Error - Click to retry";
-  }
-});
-
-hotkeySlot2Btn.addEventListener("click", async () => {
-  hotkeySlot2Btn.textContent = "Recording...";
-  try {
-    const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 2);
-    if (shortcut) {
-      hotkeySlot2Btn.textContent = shortcut;
-    } else {
-      // If user cancelled or no shortcut was selected
-      const settings = await ipcRenderer.invoke("get-settings");
-      hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
-    }
-  } catch (error) {
-    console.error("Error recording keybind:", error);
-    hotkeySlot2Btn.textContent = "Error - Click to retry";
-  }
-});
-
-// This dark mode toggle function was removed because we have a newer implementation
-// that auto-saves the theme preference (see the event listener around line 58)
-
-// Debug mode toggle
-debugModeCheckbox.addEventListener("change", async () => {
-  const debugEnabled = debugModeCheckbox.checked;
-  await ipcRenderer.invoke("set-debug-mode", debugEnabled);
-
-  // Update the status text
-  if (debugEnabled) {
-    debugStatusText.textContent =
-      "Debug mode is enabled - debug images will be saved";
-    showToast("Debug mode enabled");
-  } else {
-    debugStatusText.textContent =
-      "Debug mode is disabled - no debug images will be saved";
-    showToast("Debug mode disabled");
-  }
-});
-
-// Load settings on startup
+// Event listeners and initialization
 document.addEventListener("DOMContentLoaded", async () => {
-  loadSettings();
-
+  // Button and toggle listeners
+  setSlot1Btn.addEventListener("click", () => setRegions(1));
+  setSlot2Btn.addEventListener("click", () => setRegions(2));
+  captureSlot1Btn.addEventListener("click", () => captureSlot(1));
+  captureSlot2Btn.addEventListener("click", () => captureSlot(2));
+  copyRawBtn.addEventListener("click", () =>
+    copyText(rawTextElement.textContent)
+  );
+  copyProcessedBtn.addEventListener("click", () =>
+    copyText(processedTextElement.textContent)
+  );
+  cancelSelectionBtn.addEventListener("click", cancelRegionSelection);
+  saveRegionsBtn.addEventListener("click", saveSelectedRegions);
+  darkModeToggle.addEventListener("change", async () => {
+    const isDarkTheme = darkModeToggle.checked;
+    document.body.classList.toggle("dark-theme", isDarkTheme);
+    await ipcRenderer.invoke("save-settings", { darkTheme: isDarkTheme });
+    showToast("Theme preference saved!");
+  });
+  hotkeySlot1Btn.addEventListener("click", async () => {
+    hotkeySlot1Btn.textContent = "Recording...";
+    try {
+      const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 1);
+      if (shortcut) {
+        hotkeySlot1Btn.textContent = shortcut;
+      } else {
+        const settings = await ipcRenderer.invoke("get-settings");
+        hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
+      }
+    } catch (error) {
+      console.error("Error recording keybind:", error);
+      hotkeySlot1Btn.textContent = "Error - Click to retry";
+    }
+  });
+  hotkeySlot2Btn.addEventListener("click", async () => {
+    hotkeySlot2Btn.textContent = "Recording...";
+    try {
+      const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 2);
+      if (shortcut) {
+        hotkeySlot2Btn.textContent = shortcut;
+      } else {
+        const settings = await ipcRenderer.invoke("get-settings");
+        hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
+      }
+    } catch (error) {
+      console.error("Error recording keybind:", error);
+      hotkeySlot2Btn.textContent = "Error - Click to retry";
+    }
+  });
+  debugModeCheckbox.addEventListener("change", async () => {
+    const debugEnabled = debugModeCheckbox.checked;
+    await ipcRenderer.invoke("set-debug-mode", debugEnabled);
+    if (debugEnabled) {
+      debugStatusText.textContent =
+        "Debug mode is enabled - debug images will be saved";
+      showToast("Debug mode enabled");
+    } else {
+      debugStatusText.textContent =
+        "Debug mode is disabled - no debug images will be saved";
+      showToast("Debug mode disabled");
+    }
+  });
+  // Load settings on startup
+  await loadSettings();
   // Initialize debug mode toggle
   const settings = await ipcRenderer.invoke("get-settings");
   debugModeCheckbox.checked = settings.debugMode || false;
-
   // Set initial status text
   if (debugModeCheckbox.checked) {
     debugStatusText.textContent =
@@ -277,77 +261,81 @@ async function saveSelectedRegions() {
 // IPC events
 ipcRenderer.on("ocr-result", (event, data) => {
   console.log("[DEBUG] OCR result received:", data);
-
   // Update text display
   if (data.raw) rawTextElement.textContent = data.raw;
   if (data.processed) processedTextElement.textContent = data.processed;
   updateStatus(data.slot, "OCR completed!", "success");
+});
 
-  // If we have debug images, show a button to open the folder
-  if (data.debugDir) {
-    const debugBtn = document.createElement("button");
-    debugBtn.textContent = "🔍 Open Debug Images";
-    debugBtn.className = "btn debug-btn";
-    debugBtn.style.backgroundColor = "#ff5722"; // Bright orange color
-    debugBtn.style.color = "white";
-    debugBtn.style.fontWeight = "bold";
-    debugBtn.style.padding = "10px 20px";
-    debugBtn.style.margin = "10px 0";
-    debugBtn.style.border = "none";
-    debugBtn.style.borderRadius = "4px";
-    debugBtn.style.cursor = "pointer";
-    debugBtn.style.boxShadow = "0 2px 5px rgba(0,0,0,0.2)";
-    debugBtn.onclick = () => {
-      ipcRenderer.send("open-debug-folder", data.debugDir);
-    }; // Remove any existing debug button first
-    const existingBtn = document.getElementById("open-debug-btn");
-    if (existingBtn) {
-      existingBtn.parentNode.removeChild(existingBtn);
-    }
-
-    // Add the new button
-    debugBtn.id = "open-debug-btn";
-
-    // Create a dedicated container for the debug button at the top of the page
-    const container = document.querySelector(".container");
-
-    if (container) {
-      // Check if debug section already exists
-      let debugSection = document.querySelector(".debug-section");
-
-      // Only create a new section if one doesn't already exist
-      if (!debugSection) {
-        debugSection = document.createElement("div");
-        debugSection.className = "section debug-section";
-        debugSection.id = "debug-section";
-        debugSection.style.backgroundColor = "#fff3e0";
-        debugSection.style.padding = "10px";
-        debugSection.style.margin = "10px 0";
-        debugSection.style.border = "2px solid #ff5722";
-        debugSection.style.borderRadius = "4px";
-
-        // Add title
-        const debugTitle = document.createElement("h3");
-        debugTitle.textContent = "Debug Tools";
-        debugTitle.style.margin = "0 0 10px 0";
-        debugSection.appendChild(debugTitle);
-
-        // Insert at the beginning of the container
-        container.insertBefore(debugSection, container.firstChild);
-      } else {
-        // Clear any existing buttons with same ID
-        const existingBtns = debugSection.querySelectorAll("#open-debug-btn");
-        existingBtns.forEach((btn) => btn.parentNode.removeChild(btn));
-      }
-
-      // Add the button to the section
-      debugSection.appendChild(debugBtn);
-    } else {
-      // Fallback - just add to document body if container not found
-      document.body.insertBefore(debugBtn, document.body.firstChild);
-      console.warn("Could not find container, added debug button to body");
-    }
+// Listen for debug-images-saved event to update the recent debug images UI
+ipcRenderer.on("debug-images-saved", (event, info) => {
+  window.recentDebugImages = window.recentDebugImages || [];
+  window.recentDebugImages.push({
+    a: info.regionA,
+    b: info.regionB,
+    dir: info.debugDir,
+    ts: info.timestamp,
+  });
+  if (window.recentDebugImages.length > 2) {
+    window.recentDebugImages.shift();
   }
+  const recentDiv = document.getElementById("recent-debug-images");
+  if (recentDiv) {
+    recentDiv.innerHTML = "";
+    window.recentDebugImages
+      .slice()
+      .reverse()
+      .forEach((set, idx) => {
+        const setDiv = document.createElement("div");
+        setDiv.className = "recent-debug-set";
+        // Show large thumbnails for regionA and regionB
+        const imgA = document.createElement("img");
+        imgA.className = "recent-debug-thumb";
+        imgA.src = `file://${set.dir}/${set.a}`;
+        imgA.alt = set.a;
+        imgA.title = set.a;
+        const imgB = document.createElement("img");
+        imgB.className = "recent-debug-thumb";
+        imgB.src = `file://${set.dir}/${set.b}`;
+        imgB.alt = set.b;
+        imgB.title = set.b;
+        // Label
+        const label = document.createElement("span");
+        label.className = "recent-debug-label";
+        label.textContent = "Recent Debug Images:";
+        setDiv.appendChild(label);
+        setDiv.appendChild(imgA);
+        setDiv.appendChild(imgB);
+        // Add X button
+        const closeBtn = document.createElement("span");
+        closeBtn.textContent = "✖";
+        closeBtn.className = "recent-debug-close";
+        closeBtn.title = "Hide from list";
+        closeBtn.onclick = () => {
+          window.recentDebugImages.splice(
+            window.recentDebugImages.length - 1 - idx,
+            1
+          );
+          recentDiv.removeChild(setDiv);
+        };
+        setDiv.appendChild(closeBtn);
+        recentDiv.appendChild(setDiv);
+      });
+  }
+  // Open Debug Images button handler (now always present)
+  document.getElementById("open-debug-btn").onclick = function () {
+    // Try to use the most recent debugDir if available
+    let debugDir = null;
+    if (window.recentDebugImages && window.recentDebugImages.length > 0) {
+      debugDir =
+        window.recentDebugImages[window.recentDebugImages.length - 1].dir;
+    }
+    if (!debugDir) {
+      // Fallback: ask main process for default debug dir
+      debugDir = require("os").tmpdir() + "/ocr-debug";
+    }
+    require("electron").ipcRenderer.send("open-debug-folder", debugDir);
+  };
 });
 
 ipcRenderer.on("status-update", (event, message) => {

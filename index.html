@@ -83,7 +83,10 @@
           </div>
         </div>
 
-        <div class="debug-controls">
+        <div
+          class="debug-controls"
+          style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap"
+        >
           <div class="toggle-switch">
             <label class="toggle-switch-label">
               <span class="switch">
@@ -93,10 +96,31 @@
               Enable Debug Mode
             </label>
           </div>
-          <div class="debug-status" id="debug-status">
+          <button
+            id="open-debug-btn"
+            class="btn debug-btn"
+            style="
+              background-color: #ff5722;
+              color: white;
+              font-weight: bold;
+              padding: 10px 20px;
+              border: none;
+              border-radius: 4px;
+              cursor: pointer;
+              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            "
+          >
+            🔍 Open Debug Images
+          </button>
+          <div
+            class="debug-status"
+            id="debug-status"
+            style="flex-basis: 100%; margin-top: 8px"
+          >
             Debug mode is disabled - no debug images will be saved
           </div>
         </div>
+        <div id="recent-debug-images" class="recent-debug-images"></div>
       </div>
 
       <div class="section">
