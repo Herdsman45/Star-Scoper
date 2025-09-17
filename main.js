@@ -107,17 +107,17 @@ async function createWindow() {
 
     widgetWindow = new BrowserWindow({
       width: 360,
-      height: 170, // Back to original height as requested
+      height: 170,
       x: xPos,
       y: yPos,
       alwaysOnTop: true,
-      frame: true, // Use native frame with title bar
+      frame: true,
       title: "Star Scoper Widget",
       skipTaskbar: true,
       resizable: false,
       minimizable: true,
       maximizable: false,
-      autoHideMenuBar: true, // Hide menu bar
+      autoHideMenuBar: true,
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
@@ -127,6 +127,14 @@ async function createWindow() {
 
     // Hide menu bar by default
     widgetWindow.setMenuBarVisibility(false);
+
+    // Simple always-on-top maintenance
+    widgetWindow.on("blur", () => {
+      if (widgetWindow && !widgetWindow.isDestroyed()) {
+        widgetWindow.setAlwaysOnTop(true);
+      }
+    });
+
     widgetWindow.on("closed", () => {
       widgetWindow = null;
       // Notify the main window that the widget was closed
@@ -144,7 +152,9 @@ async function createWindow() {
 
   // IPC from widget window
   ipcMain.on("widget-capture", (event, slot) => {
-    if (!isCapturing) captureAndProcess(slot);
+    if (!isCapturing) {
+      captureAndProcess(slot);
+    }
   });
   ipcMain.on("widget-close", () => {
     if (widgetWindow) widgetWindow.close();

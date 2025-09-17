@@ -23,6 +23,7 @@
     "electron-builder": "^24.0.0"
   },
   "dependencies": {
+    "csv-writer": "^1.6.0",
     "electron-store": "^8.1.0",
     "png-chunk-text": "^1.0.0",
     "png-chunks-encode": "^1.0.0",
