@@ -12,6 +12,7 @@ const os = require("os");
 const { createWorker } = require("tesseract.js");
 const Store = require("electron-store");
 const sharp = require("sharp");
+const { SECURITY_CONFIG, SecurityValidators } = require("./security-config");
 
 // Storage for saved regions and settings
 const store = new Store();
@@ -25,9 +26,13 @@ let isCapturing = false;
 
 // Forward output call to widget
 function updateWidgetCall(callText) {
+  console.log("Updating widget call with:", callText);
   lastWidgetCall = callText;
   if (widgetWindow && !widgetWindow.isDestroyed()) {
+    console.log("Sending widget-call-update to widget window");
     widgetWindow.webContents.send("widget-call-update", callText);
+  } else {
+    console.log("Widget window not available or destroyed");
   }
 }
 
@@ -40,10 +45,7 @@ async function createWindow() {
     icon: path.join(__dirname, "build/icon.ico"), // Explicitly set the icon
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
-      nodeIntegration: true,
-      contextIsolation: false, // Keep this false since we've already built with direct IPC access
-      webSecurity: true,
-      allowRunningInsecureContent: false,
+      ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
     },
   });
 
@@ -74,7 +76,7 @@ async function createWindow() {
         responseHeaders: {
           ...details.responseHeaders,
           "Content-Security-Policy": [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none';",
           ],
         },
       });
@@ -119,14 +121,41 @@ async function createWindow() {
       maximizable: false,
       autoHideMenuBar: true,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
+        preload: path.join(__dirname, "preload.js"),
+        ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
       },
     });
+
+    // Set CSP headers for widget window
+    widgetWindow.webContents.session.webRequest.onHeadersReceived(
+      (details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            "Content-Security-Policy": [SECURITY_CONFIG.CSP_POLICY],
+            "X-Content-Type-Options": ["nosniff"],
+            "X-Frame-Options": ["DENY"],
+            "X-XSS-Protection": ["1; mode=block"],
+            "Referrer-Policy": ["no-referrer"],
+          },
+        });
+      }
+    );
+
     widgetWindow.loadFile("widget.html");
 
     // Hide menu bar by default
     widgetWindow.setMenuBarVisibility(false);
+
+    // Handle widget window events
+    widgetWindow.webContents.on("did-finish-load", () => {
+      console.log("[WIDGET] Widget window finished loading");
+      // Send the last call if available
+      if (lastWidgetCall) {
+        console.log("[WIDGET] Sending last widget call:", lastWidgetCall);
+        widgetWindow.webContents.send("widget-call-update", lastWidgetCall);
+      }
+    });
 
     // Simple always-on-top maintenance
     widgetWindow.on("blur", () => {
@@ -142,22 +171,21 @@ async function createWindow() {
         mainWindow.webContents.send("widget-closed");
       }
     });
-    // Send the last call if available
-    if (lastWidgetCall) {
-      widgetWindow.webContents.on("did-finish-load", () => {
-        widgetWindow.webContents.send("widget-call-update", lastWidgetCall);
-      });
-    }
   }
 
   // IPC from widget window
   ipcMain.on("widget-capture", (event, slot) => {
+    console.log("Widget capture request received for slot:", slot);
+    // Input validation using security validators
+    if (!SecurityValidators.validateSlotNumber(slot)) {
+      console.warn("Invalid slot number received:", slot);
+      return;
+    }
     if (!isCapturing) {
       captureAndProcess(slot);
+    } else {
+      console.log("Capture already in progress, ignoring widget request");
     }
-  });
-  ipcMain.on("widget-close", () => {
-    if (widgetWindow) widgetWindow.close();
   });
 
   // Initialize OCR engine
@@ -814,9 +842,24 @@ ipcMain.handle("save-settings", async (event, settings) => {
 ipcMain.on("open-debug-folder", (event, folderPath) => {
   console.log(`[DEBUG] Opening debug folder: ${folderPath}`);
 
+  // Security: Validate path using security validators
+  if (!SecurityValidators.validateDebugPath(folderPath)) {
+    console.warn("Invalid or unsafe folder path received:", folderPath);
+    return;
+  }
+
+  const normalizedPath = path.normalize(folderPath);
+
   // Use the operating system's file explorer to open the folder
   const { shell } = require("electron");
-  shell.openPath(folderPath);
+  if (fs.existsSync(normalizedPath)) {
+    shell.openPath(normalizedPath);
+  }
+});
+
+// Handle getting debug directory
+ipcMain.handle("get-debug-dir", async (event) => {
+  return require("os").tmpdir() + "/ocr-debug";
 });
 
 // Handle keyboard shortcut recording
@@ -835,22 +878,24 @@ ipcMain.handle("get-keyboard-shortcut", (event, slotNumber) => {
       modal: true,
       title: `Record Keyboard Shortcut for Slot ${slotNumber}`,
       webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
         preload: path.join(__dirname, "preload.js"),
-        webSecurity: true,
+        ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
       },
     });
 
     keyRecordingWindow.setMenuBarVisibility(false);
 
-    // Set CSP for the window to allow our script
+    // Set CSP for the keybind window
     keyRecordingWindow.webContents.session.webRequest.onHeadersReceived(
       (details, callback) => {
         callback({
           responseHeaders: {
             ...details.responseHeaders,
-            "Content-Security-Policy": ["script-src 'self'"],
+            "Content-Security-Policy": [SECURITY_CONFIG.CSP_POLICY],
+            "X-Content-Type-Options": ["nosniff"],
+            "X-Frame-Options": ["DENY"],
+            "X-XSS-Protection": ["1; mode=block"],
+            "Referrer-Policy": ["no-referrer"],
           },
         });
       }
@@ -931,10 +976,10 @@ ipcMain.handle("get-keyboard-shortcut", (event, slotNumber) => {
     // Load the HTML file for keybinding
     keyRecordingWindow.loadFile("keybind.html");
 
-    // DevTools code commented out - no longer needed
-    // if (process.env.DEBUG) {
-    //   keyRecordingWindow.webContents.openDevTools({ mode: "detach" });
-    // }
+    // Add debugging for keybind window
+    keyRecordingWindow.webContents.on("did-finish-load", () => {
+      console.log("[KEYBIND] Keybind recording window finished loading");
+    });
 
     keyRecordingWindow.once("closed", () => {
       // Clean up IPC handlers

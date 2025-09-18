@@ -1,35 +1,15 @@
-// Debug
-console.log("Keybinding script loaded");
+// Keybind recording functionality
 
-// Try different methods to get ipcRenderer
-let ipcRenderer;
-if (window.ipcRenderer) {
-  console.log("Found ipcRenderer on window");
-  ipcRenderer = window.ipcRenderer;
-} else if (window.electron && window.electron.ipcRenderer) {
-  console.log("Found ipcRenderer in electron bridge");
-  ipcRenderer = window.electron.ipcRenderer;
-} else if (window.require) {
-  console.log("Using require to get ipcRenderer");
-  try {
-    const electron = window.require("electron");
-    ipcRenderer = electron.ipcRenderer;
-  } catch (e) {
-    console.error("Error requiring electron:", e);
-  }
-} else {
-  console.error("No ipcRenderer found!");
+// Use secure API bridge from preload script
+if (!window.electronAPI) {
+  alert("Error: Secure API not available. Please restart the application.");
+  throw new Error("electronAPI not available");
 }
 
-// Show debug info
-console.log("ipcRenderer:", ipcRenderer);
-
 // Check if dark mode should be enabled
-if (ipcRenderer) {
-  console.log("Sending theme preference request");
-  ipcRenderer.send("get-theme-preference");
-  ipcRenderer.once("theme-preference", (event, isDarkTheme) => {
-    console.log("Received theme preference:", isDarkTheme);
+if (window.electronAPI && window.electronAPI.ipc) {
+  window.electronAPI.ipc.send("get-theme-preference");
+  window.electronAPI.ipc.once("theme-preference", (isDarkTheme) => {
     if (isDarkTheme) {
       document.body.classList.add("dark-theme");
     }
@@ -43,8 +23,6 @@ document.addEventListener("DOMContentLoaded", function () {
   const saveButton = document.getElementById("save");
   const cancelButton = document.getElementById("cancel");
 
-  console.log("Elements:", { keyElement, saveButton, cancelButton });
-
   function getModifiers(e) {
     const modifiers = [];
     if (e.ctrlKey) modifiers.push("Ctrl");
@@ -54,10 +32,8 @@ document.addEventListener("DOMContentLoaded", function () {
     return modifiers;
   }
 
-  // Log key presses to debug
+  // Handle key presses for shortcut recording
   document.addEventListener("keydown", (e) => {
-    console.log("Key pressed:", e.key, e);
-
     e.preventDefault();
 
     const modifiers = getModifiers(e);
@@ -87,7 +63,6 @@ document.addEventListener("DOMContentLoaded", function () {
       modifiers.join("+") +
       (displayKeyName && modifiers.length > 0 ? "+" : "") +
       displayKeyName;
-    console.log("Electron key:", electronKey);
 
     if (electronKey) {
       shortcut = electronKey;
@@ -95,39 +70,30 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  // Use direct DOM method to ensure listeners are attached
+  // Save button handler
   if (saveButton) {
-    console.log("Adding save button listener");
     saveButton.onclick = function () {
-      console.log("Save button clicked, shortcut:", shortcut);
-      if (shortcut && ipcRenderer) {
-        console.log("Sending keybind-save with:", shortcut);
-        ipcRenderer.send("keybind-save", shortcut);
+      if (!shortcut) {
+        alert("Please record a keyboard shortcut first!");
+        return;
+      }
 
-        // Try to close the window directly as well
-        setTimeout(() => {
-          console.log("Attempting to close window directly");
-          window.close();
-        }, 100);
+      if (window.electronAPI && window.electronAPI.ipc) {
+        window.electronAPI.ipc.send("keybind-save", shortcut);
+        setTimeout(() => window.close(), 100);
       } else {
-        console.error("Cannot save - missing shortcut or ipcRenderer");
+        alert("Error: Cannot save keybind. API not available.");
       }
     };
   }
 
+  // Cancel button handler
   if (cancelButton) {
-    console.log("Adding cancel button listener");
     cancelButton.onclick = function () {
-      console.log("Cancel button clicked");
-      if (ipcRenderer) {
-        ipcRenderer.send("keybind-cancel");
-
-        // Try to close the window directly as well
-        setTimeout(() => {
-          console.log("Attempting to close window directly after cancel");
-          window.close();
-        }, 100);
+      if (window.electronAPI && window.electronAPI.ipc) {
+        window.electronAPI.ipc.send("keybind-cancel");
       }
+      setTimeout(() => window.close(), 100);
     };
   }
 });

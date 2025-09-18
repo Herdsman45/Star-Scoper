@@ -3,21 +3,21 @@
 
 // Wait for DOM to be fully loaded
 document.addEventListener("DOMContentLoaded", () => {
-  // Show/hide widget button if main process says so (for future-proofing)
-  const { ipcRenderer } = window.require ? window.require("electron") : {};
+  // Use secure API bridge from preload script
+  const electronAPI = window.electronAPI;
 
   function showWidgetButton() {
     const widgetButton = document.getElementById("open-widget-btn");
     if (widgetButton) widgetButton.style.display = "";
   }
 
-  if (ipcRenderer) {
-    ipcRenderer.on("show-widget-button", showWidgetButton);
+  if (electronAPI) {
+    electronAPI.ipc.on("show-widget-button", showWidgetButton);
 
     const widgetButton = document.getElementById("open-widget-btn");
     if (widgetButton) {
       widgetButton.addEventListener("click", () => {
-        ipcRenderer.send("open-widget");
+        electronAPI.ipc.send("open-widget");
       });
     }
   } else {

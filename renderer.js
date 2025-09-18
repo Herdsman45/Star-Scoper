@@ -1,4 +1,10 @@
-const { ipcRenderer } = require("electron");
+// Use secure API bridge from preload script
+// electronAPI is provided by preload.js through contextBridge
+if (!window.electronAPI) {
+  throw new Error(
+    "electronAPI not available - preload script may have failed to load"
+  );
+}
 
 // DOM elements
 const rawTextElement = document.getElementById("raw-text");
@@ -52,17 +58,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   darkModeToggle.addEventListener("change", async () => {
     const isDarkTheme = darkModeToggle.checked;
     document.body.classList.toggle("dark-theme", isDarkTheme);
-    await ipcRenderer.invoke("save-settings", { darkTheme: isDarkTheme });
+    await window.electronAPI.ipc.invoke("save-settings", {
+      darkTheme: isDarkTheme,
+    });
     showToast("Theme preference saved!");
   });
   hotkeySlot1Btn.addEventListener("click", async () => {
     hotkeySlot1Btn.textContent = "Recording...";
     try {
-      const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 1);
+      const shortcut = await window.electronAPI.ipc.invoke(
+        "get-keyboard-shortcut",
+        1
+      );
       if (shortcut) {
         hotkeySlot1Btn.textContent = shortcut;
       } else {
-        const settings = await ipcRenderer.invoke("get-settings");
+        const settings = await window.electronAPI.ipc.invoke("get-settings");
         hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
       }
     } catch (error) {
@@ -73,11 +84,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   hotkeySlot2Btn.addEventListener("click", async () => {
     hotkeySlot2Btn.textContent = "Recording...";
     try {
-      const shortcut = await ipcRenderer.invoke("get-keyboard-shortcut", 2);
+      const shortcut = await window.electronAPI.ipc.invoke(
+        "get-keyboard-shortcut",
+        2
+      );
       if (shortcut) {
         hotkeySlot2Btn.textContent = shortcut;
       } else {
-        const settings = await ipcRenderer.invoke("get-settings");
+        const settings = await window.electronAPI.ipc.invoke("get-settings");
         hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
       }
     } catch (error) {
@@ -87,7 +101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   debugModeCheckbox.addEventListener("change", async () => {
     const debugEnabled = debugModeCheckbox.checked;
-    await ipcRenderer.invoke("set-debug-mode", debugEnabled);
+    await window.electronAPI.ipc.invoke("set-debug-mode", debugEnabled);
     if (debugEnabled) {
       debugStatusText.textContent =
         "Debug mode is enabled - debug images will be saved";
@@ -101,7 +115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Load settings on startup
   await loadSettings();
   // Initialize debug mode toggle
-  const settings = await ipcRenderer.invoke("get-settings");
+  const settings = await window.electronAPI.ipc.invoke("get-settings");
   debugModeCheckbox.checked = settings.debugMode || false;
   // Set initial status text
   if (debugModeCheckbox.checked) {
@@ -119,10 +133,13 @@ async function setRegions(slotNumber) {
   selectionSlotNumber.textContent = slotNumber;
 
   // Get existing regions if available
-  const existingRegions = await ipcRenderer.invoke("get-regions", slotNumber);
+  const existingRegions = await window.electronAPI.ipc.invoke(
+    "get-regions",
+    slotNumber
+  );
 
   // Start region selection with existing regions
-  const result = await ipcRenderer.invoke(
+  const result = await window.electronAPI.ipc.invoke(
     "set-regions",
     slotNumber,
     existingRegions
@@ -139,7 +156,7 @@ async function setRegions(slotNumber) {
 // Capture a slot
 async function captureSlot(slotNumber) {
   updateStatus(slotNumber, "Capturing...", "pending");
-  await ipcRenderer.invoke("capture-slot", slotNumber);
+  await window.electronAPI.ipc.invoke("capture-slot", slotNumber);
 }
 
 // Copy text to clipboard
@@ -152,7 +169,7 @@ function copyText(text) {
 
 // Load settings
 async function loadSettings() {
-  const settings = await ipcRenderer.invoke("get-settings");
+  const settings = await window.electronAPI.ipc.invoke("get-settings");
 
   hotkeySlot1Btn.textContent = settings.hotkey1 || "Click to set";
   hotkeySlot2Btn.textContent = settings.hotkey2 || "Click to set";
@@ -199,7 +216,7 @@ function showToast(message) {
 // Cancel region selection
 function cancelRegionSelection() {
   cleanupSelectionMode();
-  ipcRenderer.send("cancel-region-selection");
+  window.electronAPI.ipc.send("cancel-region-selection");
 }
 
 // Clean up selection mode
@@ -244,7 +261,7 @@ async function saveSelectedRegions() {
     );
 
     // Send regions back to main process
-    ipcRenderer.send("regions-selected", {
+    window.electronAPI.ipc.send("regions-selected", {
       regionA: currentRegions.regionA,
       regionB: currentRegions.regionB,
     });
@@ -259,7 +276,7 @@ async function saveSelectedRegions() {
 }
 
 // IPC events
-ipcRenderer.on("ocr-result", (event, data) => {
+window.electronAPI.ipc.on("ocr-result", (data) => {
   console.log("[DEBUG] OCR result received:", data);
   // Update text display
   if (data.raw) rawTextElement.textContent = data.raw;
@@ -268,7 +285,7 @@ ipcRenderer.on("ocr-result", (event, data) => {
 });
 
 // Listen for debug-images-saved event to update the recent debug images UI
-ipcRenderer.on("debug-images-saved", (event, info) => {
+window.electronAPI.ipc.on("debug-images-saved", (info) => {
   window.recentDebugImages = window.recentDebugImages || [];
   window.recentDebugImages.push({
     a: info.regionA,
@@ -323,7 +340,7 @@ ipcRenderer.on("debug-images-saved", (event, info) => {
       });
   }
   // Open Debug Images button handler (now always present)
-  document.getElementById("open-debug-btn").onclick = function () {
+  document.getElementById("open-debug-btn").onclick = async function () {
     // Try to use the most recent debugDir if available
     let debugDir = null;
     if (window.recentDebugImages && window.recentDebugImages.length > 0) {
@@ -331,21 +348,21 @@ ipcRenderer.on("debug-images-saved", (event, info) => {
         window.recentDebugImages[window.recentDebugImages.length - 1].dir;
     }
     if (!debugDir) {
-      // Fallback: ask main process for default debug dir
-      debugDir = require("os").tmpdir() + "/ocr-debug";
+      // Fallback: get default debug dir from main process
+      debugDir = await window.electronAPI.ipc.invoke("get-debug-dir");
     }
-    require("electron").ipcRenderer.send("open-debug-folder", debugDir);
+    window.electronAPI.ipc.send("open-debug-folder", debugDir);
   };
 });
 
-ipcRenderer.on("status-update", (event, message) => {
+window.electronAPI.ipc.on("status-update", (message) => {
   showToast(message);
 });
 
 // Region selection handling with resizable boxes
-ipcRenderer.on(
+window.electronAPI.ipc.on(
   "start-region-selection",
-  (event, slotNumber, screenshotDataUrl, existingRegions) => {
+  (slotNumber, screenshotDataUrl, existingRegions) => {
     currentSlot = slotNumber;
     mainContainer = document.querySelector(".container");
     mainContainer.style.opacity = "0"; // Hide main content
@@ -357,7 +374,7 @@ ipcRenderer.on(
     regionSelectionOverlay.style.backgroundPosition = "0 0";
 
     // Get display information for coordinate scaling
-    ipcRenderer.invoke("get-display-info").then((displayInfo) => {
+    window.electronAPI.ipc.invoke("get-display-info").then((displayInfo) => {
       // Calculate reverse scaling to convert real coordinates to UI coordinates
       const overlayRect = regionSelectionOverlay.getBoundingClientRect();
       const scaleX = displayInfo.width / overlayRect.width;
@@ -472,7 +489,9 @@ function createResizableBox(label, regionType, x, y, width, height) {
       const boxHeight = parseInt(box.style.height);
 
       // Get the actual display dimensions from main process
-      const displayInfo = await ipcRenderer.invoke("get-display-info");
+      const displayInfo = await window.electronAPI.ipc.invoke(
+        "get-display-info"
+      );
 
       console.log("[DEBUG] Display info from main:", displayInfo);
 
