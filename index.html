@@ -83,44 +83,7 @@
           </div>
         </div>
 
-        <div
-          class="debug-controls"
-          style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap"
-        >
-          <div class="toggle-switch">
-            <label class="toggle-switch-label">
-              <span class="switch">
-                <input type="checkbox" id="debug-mode" />
-                <span class="slider"></span>
-              </span>
-              Enable Debug Mode
-            </label>
-          </div>
-          <button
-            id="open-debug-btn"
-            class="btn debug-btn"
-            style="
-              background-color: #ff5722;
-              color: white;
-              font-weight: bold;
-              padding: 10px 20px;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-            "
-          >
-            🔍 Open Debug Images
-          </button>
-          <div
-            class="debug-status"
-            id="debug-status"
-            style="flex-basis: 100%; margin-top: 8px"
-          >
-            Debug mode is disabled - no debug images will be saved
-          </div>
-        </div>
-        <div id="recent-debug-images" class="recent-debug-images"></div>
+
       </div>
 
       <div class="section">
@@ -153,11 +116,58 @@
                 <input type="checkbox" id="ahk-integration" />
                 <span class="slider"></span>
               </span>
-              AHK Integration
+              Text File Output for Automations
             </label>
             <div class="setting-description">
-              Write Discord calls to file for AutoHotkey automation
+              Write processed text to file for external automation tools
             </div>
+          </div>
+
+          <div
+            class="setting debug-controls"
+            style="
+              grid-column: 1 / -1;
+              flex-direction: column;
+              align-items: flex-start;
+              gap: 12px;
+            "
+          >
+            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
+              <div class="toggle-switch">
+                <label class="toggle-switch-label">
+                  <span class="switch">
+                    <input type="checkbox" id="debug-mode" />
+                    <span class="slider"></span>
+                  </span>
+                  Enable Debug Mode
+                </label>
+              </div>
+              <button
+                id="open-debug-btn"
+                class="btn debug-btn"
+                style="
+                  background-color: #ff5722;
+                  color: white;
+                  font-weight: bold;
+                  padding: 8px 16px;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+                  font-size: 0.9em;
+                "
+              >
+                🔍 Open Debug Images
+              </button>
+            </div>
+            <div
+              class="debug-status"
+              id="debug-status"
+              style="font-size: 0.9em; opacity: 0.8;"
+            >
+              Debug mode is disabled - no debug images will be saved
+            </div>
+            <div id="recent-debug-images" class="recent-debug-images"></div>
           </div>
         </div>
 

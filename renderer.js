@@ -119,10 +119,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     await window.electronAPI.ipc.invoke("set-ahk-integration", ahkEnabled);
     if (ahkEnabled) {
       showToast(
-        "AHK integration enabled - Discord calls will be written to file"
+        "Text file output enabled - processed text will be written to file for automation tools"
       );
     } else {
-      showToast("AHK integration disabled");
+      showToast("Text file output disabled");
     }
   });
   // Load settings on startup
