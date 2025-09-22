@@ -23,6 +23,8 @@ let widgetWindow = null;
 let lastWidgetCall = "";
 let ocrWorker;
 let isCapturing = false;
+let preWidgetActiveWindow = null; // Store the window that was active before widget opened
+let captureFromWidget = false; // Track if current capture was initiated from widget
 
 // Forward output call to widget
 function updateWidgetCall(callText) {
@@ -90,8 +92,19 @@ async function createWindow() {
   mainWindow.webContents.on("did-finish-load", () => {
     mainWindow.webContents.send("show-widget-button");
   });
+
   // Create the always-on-top widget window
   function openWidgetWindow() {
+    // Store the currently focused window before opening widget
+    try {
+      const { screen } = require("electron");
+      preWidgetActiveWindow = screen.getCursorScreenPoint();
+      console.log("[WIDGET] Stored cursor position for focus restoration");
+    } catch (error) {
+      console.log("[WIDGET] Could not store active window info:", error);
+      preWidgetActiveWindow = null;
+    }
+
     if (widgetWindow && !widgetWindow.isDestroyed()) {
       widgetWindow.setAlwaysOnTop(true); // Re-assert always-on-top in case it was lost
       widgetWindow.focus();
@@ -182,9 +195,23 @@ async function createWindow() {
       return;
     }
     if (!isCapturing) {
+      captureFromWidget = true; // Mark this capture as coming from widget
       captureAndProcess(slot);
     } else {
       console.log("Capture already in progress, ignoring widget request");
+    }
+  });
+
+  // Handle widget button click - blur widget to restore previous focus
+  ipcMain.on("widget-button-clicked", () => {
+    console.log(
+      "[WIDGET] Button clicked, attempting to restore previous focus"
+    );
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      // Brief delay to let the click complete, then blur the widget
+      setTimeout(() => {
+        widgetWindow.blur();
+      }, 50);
     }
   });
 
@@ -286,6 +313,31 @@ function registerHotkeys() {
     } catch (e) {
       console.error("Failed to register fallback hotkeys:", e);
     }
+  }
+}
+
+// Function to restore focus to the window that was active before widget
+function restorePreviousWindowFocus() {
+  try {
+    // Approach: Briefly hide the widget to let OS restore focus to previous window
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      setTimeout(() => {
+        // Temporarily set widget to not always on top and hide it
+        widgetWindow.setAlwaysOnTop(false);
+        widgetWindow.hide();
+
+        // After a brief moment, restore the widget
+        setTimeout(() => {
+          if (widgetWindow && !widgetWindow.isDestroyed()) {
+            widgetWindow.show();
+            widgetWindow.setAlwaysOnTop(true);
+          }
+        }, 150);
+      }, 200);
+    }
+    console.log("[WIDGET] Focus restoration attempted");
+  } catch (error) {
+    console.log("[WIDGET] Could not restore previous window focus:", error);
   }
 }
 
@@ -606,6 +658,30 @@ async function captureAndProcess(slotNumber) {
     // Set processed text to clipboard by default (user can choose raw if needed)
     clipboard.writeText(processedText);
 
+    // Write to AHK integration file if enabled (only if no "Unknown" values)
+    const ahkIntegrationEnabled = store.get("ahkIntegrationEnabled", false);
+    if (ahkIntegrationEnabled) {
+      // Check if the processed text contains "Unknown"
+      const hasUnknown = processedText.toLowerCase().includes("unknown");
+
+      if (!hasUnknown) {
+        try {
+          const ahkFilePath = path.join(
+            os.tmpdir(),
+            "star-scoper-discord-call.txt"
+          );
+          fs.writeFileSync(ahkFilePath, processedText, "utf8");
+          console.log(`[AHK] Discord call written to: ${ahkFilePath}`);
+        } catch (error) {
+          console.error("[AHK] Failed to write discord call file:", error);
+        }
+      } else {
+        console.log(
+          `[AHK] Skipping auto-paste due to Unknown values in call: ${processedText}`
+        );
+      }
+    }
+
     // Send back to renderer along with debug image location (if debug mode enabled)
     // Always send ocr-result for text, but only send debugDir if debug images are confirmed saved
     if (debugMode && debugDir && debugImageInfo) {
@@ -631,10 +707,22 @@ async function captureAndProcess(slotNumber) {
       });
     }
 
+    // Reset widget capture flag
+    if (captureFromWidget) {
+      console.log("[WIDGET] Capture completed from widget");
+      captureFromWidget = false; // Reset flag
+    }
+
     isCapturing = false;
   } catch (error) {
     console.error("Capture error:", error);
     mainWindow.webContents.send("status-update", `Error: ${error.message}`);
+
+    // Reset flag even on error
+    if (captureFromWidget) {
+      captureFromWidget = false;
+    }
+
     isCapturing = false;
   }
 }
@@ -808,12 +896,19 @@ ipcMain.handle("get-settings", async (event) => {
     hotkey2: store.get("hotkey2", "F14"),
     debugMode: store.get("debugMode", false),
     darkTheme: store.get("darkTheme", false),
+    ahkIntegrationEnabled: store.get("ahkIntegrationEnabled", false),
   };
 });
 
 // Set debug mode
 ipcMain.handle("set-debug-mode", async (event, enabled) => {
   store.set("debugMode", enabled);
+  return { success: true };
+});
+
+// Set AHK integration
+ipcMain.handle("set-ahk-integration", async (event, enabled) => {
+  store.set("ahkIntegrationEnabled", enabled);
   return { success: true };
 });
 

@@ -27,6 +27,7 @@ const cancelSelectionBtn = document.getElementById("cancel-selection");
 const saveRegionsBtn = document.getElementById("save-regions");
 const debugModeCheckbox = document.getElementById("debug-mode");
 const debugStatusText = document.getElementById("debug-status");
+const ahkIntegrationCheckbox = document.getElementById("ahk-integration");
 
 // Current state
 let currentSlot = null;
@@ -112,11 +113,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast("Debug mode disabled");
     }
   });
+
+  ahkIntegrationCheckbox.addEventListener("change", async () => {
+    const ahkEnabled = ahkIntegrationCheckbox.checked;
+    await window.electronAPI.ipc.invoke("set-ahk-integration", ahkEnabled);
+    if (ahkEnabled) {
+      showToast(
+        "AHK integration enabled - Discord calls will be written to file"
+      );
+    } else {
+      showToast("AHK integration disabled");
+    }
+  });
   // Load settings on startup
   await loadSettings();
   // Initialize debug mode toggle
   const settings = await window.electronAPI.ipc.invoke("get-settings");
   debugModeCheckbox.checked = settings.debugMode || false;
+  ahkIntegrationCheckbox.checked = settings.ahkIntegrationEnabled || false;
   // Set initial status text
   if (debugModeCheckbox.checked) {
     debugStatusText.textContent =

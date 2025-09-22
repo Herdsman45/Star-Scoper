@@ -46,6 +46,10 @@
       .widget-btn:hover {
         background-color: #456c47;
       }
+      .widget-btn:focus {
+        outline: none;
+        box-shadow: none;
+      }
       .widget-content {
         padding: 10px 16px;
         font-size: 1.05em;
@@ -59,8 +63,12 @@
   <body>
     <div class="widget-header">
       <div class="widget-capture-btns">
-        <button class="widget-btn" id="capture1">Capture 1</button>
-        <button class="widget-btn" id="capture2">Capture 2</button>
+        <button class="widget-btn" id="capture1" tabindex="-1">
+          Capture 1
+        </button>
+        <button class="widget-btn" id="capture2" tabindex="-1">
+          Capture 2
+        </button>
       </div>
     </div>
     <div class="widget-content" id="widgetOutput">Waiting for call...</div>
