@@ -17,8 +17,8 @@
   gap: 6px;
 }
 .recent-debug-set {
-  background: #fff3e0;
-  border: 1px solid #ff5722;
+  background: #e3f2fd;
+  border: 1px solid #1e88e5;
   border-radius: 4px;
   padding: 4px 8px;
   display: flex;
@@ -27,7 +27,7 @@
   font-size: 0.95em;
 }
 .recent-debug-label {
-  color: #ff5722;
+  color: #1e88e5;
   font-weight: bold;
   margin-right: 4px;
 }
@@ -43,7 +43,7 @@
   transition: color 0.2s;
 }
 .recent-debug-close:hover {
-  color: #ff5722;
+  color: #1e88e5;
 }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -53,15 +53,55 @@ body {
   color: #333;
 }
 
+/* Section header with inline widget button */
+.section-header {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.section-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  display: inline-block;
+  border-bottom: none;
+}
+
+.section-header .widget-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 6px 12px;
+  font-size: 0.85em;
+}
+
+@media (max-width: 480px) {
+  .section-header .widget-button {
+    position: static;
+    margin-top: 8px;
+    display: block;
+  }
+}
+.widget-button {
+  background: linear-gradient(135deg, #1e88e5, #1565c0);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.widget-button:hover {
+  background: linear-gradient(135deg, #1565c0, #0d47a1);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3);
+}
+
 .container {
   max-width: 900px;
   margin: 0 auto;
-}
-
-h1 {
-  text-align: center;
-  color: #2c3e50;
-  margin-bottom: 30px;
 }
 
 .section {
@@ -83,46 +123,141 @@ h2 {
   font-style: italic;
   text-align: center;
   margin-top: 15px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 10px;
 }
 
 button {
-  background-color: #4caf50;
+  background: linear-gradient(135deg, #42a5f5, #1e88e5);
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  margin-right: 8px;
   margin-bottom: 8px;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 button:hover {
-  background-color: #45a049;
+  background: linear-gradient(135deg, #1e88e5, #1565c0);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3);
+}
+
+/* Keybind button overrides */
+button.keybind-button {
+  width: 120px;
+  height: 34px;
+  padding: 6px 12px;
+  background: #e9ecef !important;
+  color: #333 !important;
+  font-family: monospace;
+  text-align: center;
+  border: 1px solid #ced4da !important;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-right: 0;
+  margin-bottom: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+button.keybind-button:hover {
+  background: #dee2e6 !important;
+  transform: none !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+}
+
+button.keybind-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.3) !important;
 }
 
 .slots {
   display: flex;
+  gap: 20px;
   justify-content: space-between;
 }
 
 .slot {
   flex: 1;
-  padding: 15px;
+  padding: 20px;
   background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.slot-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.slot-hotkey {
+  background: #6c757d;
+  color: white;
+  padding: 4px 8px;
   border-radius: 4px;
-  margin: 0 10px;
+  font-size: 0.8em;
+  font-weight: 500;
+  font-family: monospace;
+  position: absolute;
+  right: 0;
+  top: 0;
 }
 
-.slot:first-child {
-  margin-left: 0;
+.slot-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
-.slot:last-child {
-  margin-right: 0;
+.btn-primary {
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.95em;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0056b3, #004085);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9em;
+}
+
+.btn-secondary:hover {
+  background: #5a6268;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .status {
@@ -169,9 +304,9 @@ button:hover {
   overflow-y: auto;
 }
 
-.settings-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.settings-list {
+  display: flex;
+  flex-direction: column;
   gap: 15px;
   margin-bottom: 20px;
 }
@@ -179,6 +314,12 @@ button:hover {
 .setting {
   display: flex;
   align-items: center;
+}
+
+.debug-setting {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .setting label {

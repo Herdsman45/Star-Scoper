@@ -18,10 +18,6 @@ body.dark-theme {
   color: #e0e0e0;
 }
 
-.dark-theme h2 {
-  border-bottom: 1px solid #3d3d3d;
-}
-
 /* Status messages */
 .dark-theme .status.success {
   background-color: #2e4b2f;
@@ -82,29 +78,86 @@ body.dark-theme {
 }
 
 /* Keybind buttons */
-.dark-theme .keybind-button {
-  background-color: #252525;
-  border: 1px solid #3d3d3d;
-  color: #e0e0e0;
+.dark-theme button.keybind-button {
+  width: 120px;
+  height: 34px;
+  padding: 6px 12px;
+  background: #2a2a2a !important;
+  color: #e0e0e0 !important;
+  font-family: monospace;
+  text-align: center;
+  border: 1px solid #404040 !important;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-right: 0;
+  margin-bottom: 0;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(0, 0, 0, 0.2) !important;
 }
 
-.dark-theme .keybind-button:hover {
-  background-color: #333333;
+.dark-theme button.keybind-button:hover {
+  background: #323232 !important;
+  transform: none !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Slots */
 .dark-theme .slot {
   background-color: #252525;
+  border-color: #3d3d3d;
 }
 
-/* Theme toggle switch */
-.theme-toggle {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  display: flex;
-  align-items: center;
-  z-index: 100;
+.dark-theme .slot-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-theme .slot-hotkey {
+  background: #495057;
+  color: #e0e0e0;
+}
+
+.dark-theme .btn-primary {
+  background: linear-gradient(135deg, #0d6efd, #0a58ca);
+}
+
+.dark-theme .btn-primary:hover {
+  background: linear-gradient(135deg, #0a58ca, #084298);
+}
+
+.dark-theme .btn-secondary {
+  background: #495057;
+}
+
+.dark-theme .btn-secondary:hover {
+  background: #5c636a;
+}
+
+/* Section header dark theme */
+.dark-theme .section-header {
+  border-bottom-color: #3d3d3d;
+}
+
+.dark-theme .section-header h2 {
+  color: #e0e0e0;
+}
+
+/* Toggle switches in dark mode */
+.dark-theme .slider {
+  background-color: #3d3d3d;
+}
+
+.dark-theme input:checked + .slider {
+  background-color: #42a5f5;
+}
+
+.dark-theme input:focus + .slider {
+  box-shadow: 0 0 1px #42a5f5;
+}
+
+.dark-theme .slider:before {
+  background-color: #e0e0e0;
 }
 
 .theme-toggle .toggle-switch-label {

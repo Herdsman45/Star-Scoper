@@ -15,53 +15,40 @@
     <link rel="stylesheet" href="keybind-styles.css" />
   </head>
   <body>
-    <!-- Theme toggle and Widget button -->
-    <div
-      class="theme-toggle"
-      style="display: flex; align-items: center; gap: 16px"
-    >
-      <label class="toggle-switch-label" style="margin-bottom: 0">
-        <span class="switch">
-          <input type="checkbox" id="dark-mode-toggle" />
-          <span class="slider"></span>
-        </span>
-        Dark Mode
-      </label>
-      <button
-        id="open-widget-btn"
-        class="widget-button"
-        style="
-          padding: 8px 16px;
-          background: var(--button-bg, #444);
-          color: var(--button-text, #fff);
-          border: none;
-          border-radius: 6px;
-          cursor: pointer;
-          font-size: 1em;
-          transition: background 0.2s;
-        "
-      >
-        Open Widget
-      </button>
-    </div>
-
     <div class="container">
-      <h1>Star Scoper</h1>
-
       <div class="section">
-        <h2>Quick Capture</h2>
+        <div class="section-header">
+          <h2>Quick Capture</h2>
+          <button id="open-widget-btn" class="widget-button">
+            Open Widget
+          </button>
+        </div>
         <div class="slots">
           <div class="slot">
-            <h3>Slot 1</h3>
-            <button id="set-slot1">Set Regions</button>
-            <button id="capture-slot1">Capture</button>
+            <div class="slot-header">
+              <h3>Region Set 1</h3>
+              <span class="slot-hotkey" id="slot1-hotkey">F13</span>
+            </div>
+            <div class="slot-actions">
+              <button id="set-slot1" class="btn-secondary">
+                ⚙️ Setup Regions
+              </button>
+              <button id="capture-slot1" class="btn-primary">📸 Capture</button>
+            </div>
             <div class="status" id="status-slot1"></div>
           </div>
 
           <div class="slot">
-            <h3>Slot 2</h3>
-            <button id="set-slot2">Set Regions</button>
-            <button id="capture-slot2">Capture</button>
+            <div class="slot-header">
+              <h3>Region Set 2</h3>
+              <span class="slot-hotkey" id="slot2-hotkey">F14</span>
+            </div>
+            <div class="slot-actions">
+              <button id="set-slot2" class="btn-secondary">
+                ⚙️ Setup Regions
+              </button>
+              <button id="capture-slot2" class="btn-primary">📸 Capture</button>
+            </div>
             <div class="status" id="status-slot2"></div>
           </div>
         </div>
@@ -82,13 +69,11 @@
             <button id="copy-processed">Copy Star Call</button>
           </div>
         </div>
-
-
       </div>
 
       <div class="section">
         <h2>Settings</h2>
-        <div class="settings-grid">
+        <div class="settings-list">
           <div class="setting">
             <label for="hotkey-slot1">Slot 1 Keybind:</label>
             <button id="hotkey-slot1" class="keybind-button">
@@ -103,72 +88,72 @@
             </button>
           </div>
 
-          <div
-            class="setting"
-            style="
-              grid-column: 1 / -1;
-              flex-direction: column;
-              align-items: flex-start;
-            "
-          >
-            <label class="toggle-switch-label">
+          <div class="setting">
+            <label
+              class="toggle-switch-label"
+              title="Switch between light and dark interface themes"
+            >
+              <span class="switch">
+                <input type="checkbox" id="dark-mode-toggle" />
+                <span class="slider"></span>
+              </span>
+              Dark Mode
+            </label>
+          </div>
+
+          <div class="setting">
+            <label
+              class="toggle-switch-label"
+              title="Write processed text to file for external automation tools like AutoHotkey"
+            >
               <span class="switch">
                 <input type="checkbox" id="ahk-integration" />
                 <span class="slider"></span>
               </span>
               Text File Output for Automations
             </label>
-            <div class="setting-description">
-              Write processed text to file for external automation tools
-            </div>
+          </div>
+
+          <div class="setting debug-setting">
+            <label
+              class="toggle-switch-label"
+              title="Save debug images during OCR processing for troubleshooting"
+            >
+              <span class="switch">
+                <input type="checkbox" id="debug-mode" />
+                <span class="slider"></span>
+              </span>
+              Enable Debug Mode
+            </label>
+            <button
+              id="open-debug-btn"
+              class="btn debug-btn"
+              title="Open folder containing debug images"
+              style="
+                background: linear-gradient(135deg, #42a5f5, #1e88e5);
+                color: white;
+                font-weight: 500;
+                padding: 6px 12px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 0.85em;
+                margin-left: 16px;
+                transition: all 0.2s ease;
+              "
+            >
+              🔍 Open Debug Images
+            </button>
           </div>
 
           <div
-            class="setting debug-controls"
-            style="
-              grid-column: 1 / -1;
-              flex-direction: column;
-              align-items: flex-start;
-              gap: 12px;
-            "
+            class="debug-status"
+            id="debug-status"
+            style="font-size: 0.9em; opacity: 0.8; margin-left: 40px"
           >
-            <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap">
-              <div class="toggle-switch">
-                <label class="toggle-switch-label">
-                  <span class="switch">
-                    <input type="checkbox" id="debug-mode" />
-                    <span class="slider"></span>
-                  </span>
-                  Enable Debug Mode
-                </label>
-              </div>
-              <button
-                id="open-debug-btn"
-                class="btn debug-btn"
-                style="
-                  background-color: #ff5722;
-                  color: white;
-                  font-weight: bold;
-                  padding: 8px 16px;
-                  border: none;
-                  border-radius: 4px;
-                  cursor: pointer;
-                  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-                  font-size: 0.9em;
-                "
-              >
-                🔍 Open Debug Images
-              </button>
-            </div>
-            <div
-              class="debug-status"
-              id="debug-status"
-              style="font-size: 0.9em; opacity: 0.8;"
-            >
-              Debug mode is disabled - no debug images will be saved
-            </div>
-            <div id="recent-debug-images" class="recent-debug-images"></div>
+            Debug mode is disabled - no debug images will be saved
           </div>
+          <div id="recent-debug-images" class="recent-debug-images"></div>
         </div>
 
         <p class="info-text">
