@@ -7,6 +7,11 @@ on:
     branches:
       - main # Also build on main branch pushes for testing
 
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
 jobs:
   build:
     runs-on: ${{ matrix.os }}
@@ -38,17 +43,13 @@ jobs:
       - name: Build Windows App
         if: matrix.os == 'windows-latest'
         run: |
-          npx electron-builder --win --x64
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npx electron-builder --win --x64 --publish never
 
       # For macOS builds
       - name: Build macOS App
         if: matrix.os == 'macos-latest'
         run: |
-          npx electron-builder --mac
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          npx electron-builder --mac --publish never
 
       # Upload artifacts
       - name: Upload Artifacts
