@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Development helper script for Star Scoper OCR
+ * Development helper script for Star Scoper
  * Run with: node scripts/dev-helper.js [command]
  *
  * Available commands:

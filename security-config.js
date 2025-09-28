@@ -1,5 +1,5 @@
 /**
- * Security Configuration for Star Scoper OCR
+ * Security Configuration for Star Scoper
  * Centralized security settings and validation functions
  */
 

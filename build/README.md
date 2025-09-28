@@ -1,4 +1,4 @@
-# Star Scoper OCR - Icon Creation Guide
+# Star Scoper - Icon Creation Guide
 
 For proper packaging, you need to create icons in the following formats:
 

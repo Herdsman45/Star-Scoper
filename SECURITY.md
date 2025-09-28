@@ -2,7 +2,7 @@
 
 ## Supported Versions
 
-Currently, only the latest version of Star Scoper OCR is actively maintained and receives security updates.
+Currently, only the latest version of Star Scoper is actively maintained and receives security updates.
 
 | Version  | Supported          |
 | -------- | ------------------ |
@@ -11,7 +11,7 @@ Currently, only the latest version of Star Scoper OCR is actively maintained and
 
 ## Privacy Statement
 
-Star Scoper OCR is designed with privacy and security in mind:
+Star Scoper is designed with privacy and security in mind:
 
 - **No Data Collection**: The application does not collect any user data
 - **No Network Communication**: The application does not send any data over the network
@@ -19,7 +19,7 @@ Star Scoper OCR is designed with privacy and security in mind:
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability within Star Scoper OCR, please submit an issue with the label "security" on our GitHub repository.
+If you discover a security vulnerability within Star Scoper, please submit an issue with the label "security" on our GitHub repository.
 
 We take security issues seriously and will address them promptly.
 

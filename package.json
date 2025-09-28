@@ -1,5 +1,5 @@
 {
-  "name": "electron-ocr-tool",
+  "name": "star-scoper",
   "version": "1.0.0",
   "description": "Cross-platform OCR tool for screen capture and text processing",
   "main": "main.js",
@@ -16,7 +16,7 @@
     "prepare-release": "node scripts/dev-helper.js prepare-release",
     "release": "npm run clean && npm run check && npm run build"
   },
-  "author": "StarScopeOCR Team",
+  "author": "Star Scoper Team",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",
@@ -38,8 +38,8 @@
     "tesseract.js": "^5.0.0"
   },
   "build": {
-    "appId": "com.starscoper.ocr-tool",
-    "productName": "Star Scoper OCR",
+    "appId": "com.starscoper.app",
+    "productName": "Star Scoper",
     "files": [
       "**/*",
       "!**/.git/**",

@@ -1,4 +1,4 @@
-# 🔐 Security Audit Checklist - Star Scoper OCR
+# 🔐 Security Audit Checklist - Star Scoper
 
 ## ✅ **IMPLEMENTED SECURITY MEASURES**
 

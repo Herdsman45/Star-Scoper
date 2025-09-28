@@ -1,4 +1,4 @@
-// Widget window logic for Star Scoper OCR
+// Widget window logic for Star Scoper
 // Use secure API bridge from preload script
 // electronAPI is provided by preload.js through contextBridge
 console.log("Widget.js loading...");

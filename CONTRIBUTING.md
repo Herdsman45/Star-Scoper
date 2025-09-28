@@ -1,6 +1,6 @@
-# Contributing to Star Scoper OCR
+# Contributing to Star Scoper
 
-Thank you for considering contributing to Star Scoper OCR! This document provides guidelines and instructions for contributing to this project.
+Thank you for considering contributing to Star Scoper! This document provides guidelines and instructions for contributing to this project.
 
 ## Code of Conduct
 
@@ -62,4 +62,4 @@ npm run build
 
 ## License
 
-By contributing to Star Scoper OCR, you agree that your contributions will be licensed under the project's MIT license.
+By contributing to Star Scoper, you agree that your contributions will be licensed under the project's MIT license.

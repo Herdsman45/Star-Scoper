@@ -191,8 +191,8 @@ async function loadSettings() {
   // Update slot hotkey displays
   const slot1Hotkey = document.getElementById("slot1-hotkey");
   const slot2Hotkey = document.getElementById("slot2-hotkey");
-  if (slot1Hotkey) slot1Hotkey.textContent = settings.hotkey1 || "F13";
-  if (slot2Hotkey) slot2Hotkey.textContent = settings.hotkey2 || "F14";
+  if (slot1Hotkey) slot1Hotkey.textContent = settings.hotkey1 || "F1";
+  if (slot2Hotkey) slot2Hotkey.textContent = settings.hotkey2 || "F2";
 
   // Set theme based on stored preference (this runs after the initial check)
   if (settings.darkTheme) {

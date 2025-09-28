@@ -1,11 +1,11 @@
 #Requires AutoHotkey v2.0
-; Discord Auto-Paste Integration Script for Star Scoper OCR (AutoHotkey v2)
+; Discord Auto-Paste Integration Script for Star Scoper (AutoHotkey v2)
 ; This script watches for the Discord call file and automatically pastes it into Discord
 ;
 ; Instructions:
-; 1. Enable "AHK Integration" in the Star Scoper OCR app settings
+; 1. Enable "Text File Output for Automations" in the Star Scoper app settings
 ; 2. Run this script (it will run in the background)
-; 3. Use Star Scoper OCR as normal - when a call is processed, it will be auto-pasted into Discord
+; 3. Use Star Scoper as normal - when a call is processed, it will be auto-pasted into Discord
 ;
 ; Requirements:
 ; - Discord window must be named "Discord" (works with regular Discord client)
@@ -28,7 +28,7 @@ try {
 }
 
 ; Show tray notification that script is running
-TrayTip("Star Scoper OCR Discord integration is running!", "Discord Integration", 0x1)
+TrayTip("Star Scoper Discord integration is running!", "Discord Integration", 0x1)
 
 ; Main loop - check file every 100ms
 SetTimer(CheckFile, 100)

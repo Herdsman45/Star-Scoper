@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Initial release of Star Scoper OCR
+- Initial release of Star Scoper
 - Screen capture functionality with hotkey (Alt+Shift+S)
 - OCR processing using Tesseract.js
 - Text formatting for Discord commands

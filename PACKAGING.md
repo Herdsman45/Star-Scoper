@@ -1,6 +1,6 @@
-# Star Scoper OCR - Packaging & Release Guide
+# Star Scoper - Packaging & Release Guide
 
-This document explains how to package and release Star Scoper OCR using GitHub Actions.
+This document explains how to package and release Star Scoper using GitHub Actions.
 
 ## GitHub Actions Workflow
 
@@ -20,7 +20,7 @@ The workflow defined in `.github/workflows/build.yml` performs the following ste
 
 ## How to Create a Release
 
-To create a new release of Star Scoper OCR:
+To create a new release of Star Scoper:
 
 1. Update the version in `package.json`
 2. Commit your changes

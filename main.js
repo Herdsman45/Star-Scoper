@@ -240,8 +240,8 @@ function registerHotkeys() {
   globalShortcut.unregisterAll();
 
   const isMac = process.platform === "darwin";
-  const defaultHotkey1 = isMac ? "Command+F1" : "Alt+Shift+1";
-  const defaultHotkey2 = isMac ? "Command+F2" : "Alt+Shift+2";
+  const defaultHotkey1 = isMac ? "Command+F1" : "F1";
+  const defaultHotkey2 = isMac ? "Command+F2" : "F2";
 
   // Get saved hotkeys from store
   let hotkey1 = store.get("hotkey1", defaultHotkey1);
@@ -892,8 +892,8 @@ ipcMain.handle("capture-slot", async (event, slotNumber) => {
 // Get settings
 ipcMain.handle("get-settings", async (event) => {
   return {
-    hotkey1: store.get("hotkey1", "F13"),
-    hotkey2: store.get("hotkey2", "F14"),
+    hotkey1: store.get("hotkey1", "F1"),
+    hotkey2: store.get("hotkey2", "F2"),
     debugMode: store.get("debugMode", false),
     darkTheme: store.get("darkTheme", false),
     ahkIntegrationEnabled: store.get("ahkIntegrationEnabled", false),

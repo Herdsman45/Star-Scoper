@@ -1,8 +1,8 @@
-# Star Scoper OCR
+# Star Scoper
 
 A specialized OCR (Optical Character Recognition) tool for RuneScape players to capture shooting star telescope information and format it for Discord sharing.
 
-![Star Scoper OCR](build/screenshot.png)
+![Star Scoper](build/screenshot.png)
 
 ## Disclaimer
 
@@ -19,7 +19,7 @@ A specialized OCR (Optical Character Recognition) tool for RuneScape players to 
 
 ## Privacy & Security
 
-**No data collection or transmission**: Star Scoper OCR:
+**No data collection or transmission**: Star Scoper:
 
 - Does not collect any user data
 - Does not transmit any information over the internet
@@ -32,7 +32,7 @@ A specialized OCR (Optical Character Recognition) tool for RuneScape players to 
 
 1. Download the latest release for your platform from the [Releases page](https://github.com/yourusername/Star-Scoper-OCR/releases)
 2. Install or extract the application
-3. Run Star Scoper OCR
+3. Run Star Scoper
 
 ### Building from Source
 
@@ -58,7 +58,7 @@ A specialized OCR (Optical Character Recognition) tool for RuneScape players to 
 
 ### Capturing and Processing Text
 
-1. Use the assigned hotkey (default: F13 for Slot 1, F14 for Slot 2) or click the "Capture" button
+1. Use the assigned hotkey (default: F1 for Slot 1, F2 for Slot 2) or click the "Capture" button
 2. The OCR tool will:
    - Take a screenshot of your selected regions
    - Process the text through OCR

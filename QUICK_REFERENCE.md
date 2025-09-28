@@ -1,4 +1,4 @@
-# Star Scoper OCR - Quick Reference
+# Star Scoper - Quick Reference
 
 ## Hotkeys
 
