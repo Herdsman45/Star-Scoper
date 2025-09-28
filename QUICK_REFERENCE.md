@@ -2,8 +2,7 @@
 
 ## Hotkeys
 
-- **Alt+Shift+S**: Capture screen, process text, and generate Discord command
-- **Ctrl+D** or **Command+D** (macOS): Toggle between dark and light theme
+- **F1/F2**: Capture screen, process text, and generate Discord command
 
 ## Discord Command Format
 
@@ -46,4 +45,4 @@ Where:
 ## Getting Support
 
 If you encounter issues, please report them on GitHub:
-https://github.com/yourusername/Star-Scoper-OCR/issues
+https://github.com/herdsman45/Star-Scoper-OCR/issues

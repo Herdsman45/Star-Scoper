@@ -1,6 +1,6 @@
 {
   "name": "star-scoper",
-  "version": "1.0.0",
+  "version": "0.3.0",
   "description": "Cross-platform OCR tool for screen capture and text processing",
   "main": "main.js",
   "scripts": {

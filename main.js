@@ -40,15 +40,36 @@ function updateWidgetCall(callText) {
 
 // Initialize app
 async function createWindow() {
-  mainWindow = new BrowserWindow({
+  // Get saved window bounds or use defaults
+  const mainWindowBounds = store.get("mainWindowBounds", {
     width: 900,
     height: 700,
+    x: undefined,
+    y: undefined,
+  });
+
+  mainWindow = new BrowserWindow({
+    width: mainWindowBounds.width,
+    height: mainWindowBounds.height,
+    x: mainWindowBounds.x,
+    y: mainWindowBounds.y,
     autoHideMenuBar: true, // Hides the menu bar but allows showing with Alt key
     icon: path.join(__dirname, "build/icon.ico"), // Explicitly set the icon
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
     },
+  });
+
+  // Save window bounds when resized or moved
+  mainWindow.on("resize", () => {
+    const bounds = mainWindow.getBounds();
+    store.set("mainWindowBounds", bounds);
+  });
+
+  mainWindow.on("move", () => {
+    const bounds = mainWindow.getBounds();
+    store.set("mainWindowBounds", bounds);
   });
 
   // Listen for widget open request from renderer
@@ -115,10 +136,23 @@ async function createWindow() {
     let mainPos = mainWindow.getPosition();
     let mainSize = mainWindow.getSize();
 
-    // Position the widget on the same screen as the main window
-    // Center it horizontally relative to main window, place near the top
-    const xPos = Math.floor(mainPos[0] + (mainSize[0] - 360) / 2);
-    const yPos = mainPos[1] + 50; // Position it near the top of the main window
+    // Get saved widget position or calculate default
+    const savedWidgetBounds = store.get("widgetWindowBounds");
+    let xPos, yPos;
+
+    if (
+      savedWidgetBounds &&
+      savedWidgetBounds.x !== undefined &&
+      savedWidgetBounds.y !== undefined
+    ) {
+      // Use saved position
+      xPos = savedWidgetBounds.x;
+      yPos = savedWidgetBounds.y;
+    } else {
+      // Calculate default position - center it horizontally relative to main window, place near the top
+      xPos = Math.floor(mainPos[0] + (mainSize[0] - 360) / 2);
+      yPos = mainPos[1] + 50;
+    }
 
     widgetWindow = new BrowserWindow({
       width: 360,
@@ -137,6 +171,12 @@ async function createWindow() {
         preload: path.join(__dirname, "preload.js"),
         ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
       },
+    });
+
+    // Save widget position when moved
+    widgetWindow.on("move", () => {
+      const bounds = widgetWindow.getBounds();
+      store.set("widgetWindowBounds", { x: bounds.x, y: bounds.y });
     });
 
     // Set CSP headers for widget window
@@ -895,7 +935,7 @@ ipcMain.handle("get-settings", async (event) => {
     hotkey1: store.get("hotkey1", "F1"),
     hotkey2: store.get("hotkey2", "F2"),
     debugMode: store.get("debugMode", false),
-    darkTheme: store.get("darkTheme", false),
+    darkTheme: store.get("darkTheme", true),
     ahkIntegrationEnabled: store.get("ahkIntegrationEnabled", false),
   };
 });
@@ -923,7 +963,7 @@ ipcMain.handle("save-settings", async (event, settings) => {
   // Now we only save the theme setting as hotkeys are saved directly when set
   if (settings.darkTheme !== undefined) {
     // Check if the theme is actually different from what's stored
-    const currentTheme = store.get("darkTheme", false);
+    const currentTheme = store.get("darkTheme", true);
     if (currentTheme !== settings.darkTheme) {
       store.set("darkTheme", settings.darkTheme);
       console.log("Saved dark theme preference:", settings.darkTheme);
@@ -1060,7 +1100,7 @@ ipcMain.handle("get-keyboard-shortcut", (event, slotNumber) => {
     ipcMain.on("keybind-cancel", keybindCancelHandler);
 
     // Get current theme preference
-    const isDarkTheme = store.get("darkTheme", false);
+    const isDarkTheme = store.get("darkTheme", true);
 
     // Set up theme handler for the keybind window
     ipcMain.on("get-theme-preference", (event) => {
