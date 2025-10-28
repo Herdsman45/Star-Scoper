@@ -246,6 +246,7 @@ function cleanupSelectionMode() {
   regionSelectionOverlay.style.backgroundSize = "";
   regionSelectionOverlay.style.backgroundPosition = "";
   mainContainer.style.opacity = "1";
+  document.body.style.overflow = ""; // Restore scrolling
 
   // Remove any resizable boxes
   resizableBoxes.forEach((box) => {
@@ -267,16 +268,16 @@ async function saveSelectedRegions() {
   showToast("Processing regions...");
 
   try {
-    // Get coordinates from boxes (now async)
+    // Get coordinates from boxes (direct screen coordinates, no scaling)
     currentRegions.regionA = await resizableBoxes[0].getCoordinates();
     currentRegions.regionB = await resizableBoxes[1].getCoordinates();
 
     console.log(
-      "[DEBUG] Saving regionA:",
+      "[DEBUG] Saving regionA (direct coords):",
       JSON.stringify(currentRegions.regionA)
     );
     console.log(
-      "[DEBUG] Saving regionB:",
+      "[DEBUG] Saving regionB (direct coords):",
       JSON.stringify(currentRegions.regionB)
     );
 
@@ -387,58 +388,40 @@ window.electronAPI.ipc.on(
     mainContainer = document.querySelector(".container");
     mainContainer.style.opacity = "0"; // Hide main content
 
-    // Show the overlay with screenshot
+    // Show the overlay with screenshot as background
     regionSelectionOverlay.classList.remove("hidden");
     regionSelectionOverlay.style.backgroundImage = `url(${screenshotDataUrl})`;
     regionSelectionOverlay.style.backgroundSize = "100% 100%";
     regionSelectionOverlay.style.backgroundPosition = "0 0";
+    regionSelectionOverlay.style.backgroundRepeat = "no-repeat";
+    document.body.style.overflow = "hidden"; // Prevent scrolling
 
-    // Get display information for coordinate scaling
-    window.electronAPI.ipc.invoke("get-display-info").then((displayInfo) => {
-      // Calculate reverse scaling to convert real coordinates to UI coordinates
-      const overlayRect = regionSelectionOverlay.getBoundingClientRect();
-      const scaleX = displayInfo.width / overlayRect.width;
-      const scaleY = displayInfo.height / overlayRect.height;
+    // Create two resizable boxes - using direct coordinates (1:1 with screen)
+    if (existingRegions && existingRegions.regionA) {
+      createResizableBox(
+        "Main Dialog Region",
+        "regionA",
+        existingRegions.regionA.x,
+        existingRegions.regionA.y,
+        existingRegions.regionA.width,
+        existingRegions.regionA.height
+      );
+    } else {
+      createResizableBox("Main Dialog Region", "regionA");
+    }
 
-      // Create two resizable boxes
-      if (existingRegions && existingRegions.regionA) {
-        // Convert real coordinates back to UI coordinates
-        const uiX = Math.round(existingRegions.regionA.x / scaleX);
-        const uiY = Math.round(existingRegions.regionA.y / scaleY);
-        const uiWidth = Math.round(existingRegions.regionA.width / scaleX);
-        const uiHeight = Math.round(existingRegions.regionA.height / scaleY);
-
-        createResizableBox(
-          "Main Dialog Region",
-          "regionA",
-          uiX,
-          uiY,
-          uiWidth,
-          uiHeight
-        );
-      } else {
-        createResizableBox("Main Dialog Region", "regionA");
-      }
-
-      if (existingRegions && existingRegions.regionB) {
-        // Convert real coordinates back to UI coordinates
-        const uiX = Math.round(existingRegions.regionB.x / scaleX);
-        const uiY = Math.round(existingRegions.regionB.y / scaleY);
-        const uiWidth = Math.round(existingRegions.regionB.width / scaleX);
-        const uiHeight = Math.round(existingRegions.regionB.height / scaleY);
-
-        createResizableBox(
-          "World Line Region",
-          "regionB",
-          uiX,
-          uiY,
-          uiWidth,
-          uiHeight
-        );
-      } else {
-        createResizableBox("World Line Region", "regionB");
-      }
-    });
+    if (existingRegions && existingRegions.regionB) {
+      createResizableBox(
+        "World Line Region",
+        "regionB",
+        existingRegions.regionB.x,
+        existingRegions.regionB.y,
+        existingRegions.regionB.width,
+        existingRegions.regionB.height
+      );
+    } else {
+      createResizableBox("World Line Region", "regionB");
+    }
   }
 );
 
@@ -498,61 +481,22 @@ function createResizableBox(label, regionType, x, y, width, height) {
     element: box,
     type: regionType,
     getCoordinates: async () => {
-      // Get the overlay's dimensions
-      const overlay = document.getElementById("region-selection-overlay");
-      const overlayRect = overlay.getBoundingClientRect();
-
-      // Get the box position relative to overlay
+      // Get the box position (these are now direct screen coordinates)
       const boxLeft = parseInt(box.style.left);
       const boxTop = parseInt(box.style.top);
       const boxWidth = parseInt(box.style.width);
       const boxHeight = parseInt(box.style.height);
 
-      // Get the actual display dimensions from main process
-      const displayInfo = await window.electronAPI.ipc.invoke(
-        "get-display-info"
+      console.log(
+        `[DEBUG] Box coordinates (direct screen coords): X=${boxLeft}, Y=${boxTop}, width=${boxWidth}, height=${boxHeight}`
       );
 
-      console.log("[DEBUG] Display info from main:", displayInfo);
-
-      // Calculate scaling factors - use the full display dimensions
-      const scaleX = displayInfo.width / overlayRect.width;
-      const scaleY = displayInfo.height / overlayRect.height; // Scale the coordinates
-      const scaledX = Math.round(boxLeft * scaleX);
-      const scaledY = Math.round(boxTop * scaleY);
-      const scaledWidth = Math.round(boxWidth * scaleX);
-      const scaledHeight = Math.round(boxHeight * scaleY);
-
-      console.log(
-        `[DEBUG] Box UI coordinates: left=${boxLeft}, top=${boxTop}, width=${boxWidth}, height=${boxHeight}`
-      );
-      console.log(
-        `[DEBUG] Overlay dimensions: width=${overlayRect.width}, height=${overlayRect.height}`
-      );
-      console.log(
-        `[DEBUG] Display dimensions: width=${displayInfo.width}, height=${displayInfo.height}`
-      );
-      console.log(
-        `[DEBUG] Scaling factors: X=${scaleX.toFixed(2)}, Y=${scaleY.toFixed(
-          2
-        )}`
-      );
-      console.log(
-        `[DEBUG] Scaled coordinates: X=${scaledX}, Y=${scaledY}, width=${scaledWidth}, height=${scaledHeight}`
-      );
-
+      // Return coordinates directly - no scaling needed!
       return {
-        x: scaledX,
-        y: scaledY,
-        width: scaledWidth,
-        height: scaledHeight,
-        // Include original UI coordinates and scaling for debugging
-        uiX: boxLeft,
-        uiY: boxTop,
-        uiWidth: boxWidth,
-        uiHeight: boxHeight,
-        scaleX: scaleX,
-        scaleY: scaleY,
+        x: boxLeft,
+        y: boxTop,
+        width: boxWidth,
+        height: boxHeight,
       };
     },
   };

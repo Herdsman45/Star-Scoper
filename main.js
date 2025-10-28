@@ -784,54 +784,18 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
     `[DEBUG] App window is on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
   );
 
-  // Store the display dimensions for later coordinate scaling
-  store.set("captureDisplayInfo", {
-    width: currentDisplay.size.width,
-    height: currentDisplay.size.height,
-    workAreaWidth: currentDisplay.workArea.width,
-    workAreaHeight: currentDisplay.workArea.height,
-    bounds: currentDisplay.bounds,
-    workArea: currentDisplay.workArea,
-  });
-
-  // Use Electron's desktopCapturer to get all screen sources
+  // Capture the screen at full resolution
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
-    thumbnailSize: { width: 1920, height: 1080 },
+    thumbnailSize: currentDisplay.size, // Use actual display size for accurate 1:1 capture
   });
 
-  console.log(`[DEBUG] Found ${sources.length} screen sources`);
+  console.log(
+    `[DEBUG] Captured screen at ${currentDisplay.size.width}x${currentDisplay.size.height}`
+  );
 
-  // Try to find the source that matches our current display
-  let targetSource = sources[0]; // Default to first source if we can't find a match
-
-  if (sources.length > 1) {
-    // Log all displays to help with debugging
-    sources.forEach((source, index) => {
-      console.log(
-        `[DEBUG] Source ${index}: ${source.id}, ${source.name}, ${source.display_id}`
-      );
-    });
-
-    // Try to match by display_id if available
-    if (currentDisplay.id) {
-      const matchedSource = sources.find(
-        (s) =>
-          s.display_id === currentDisplay.id.toString() ||
-          s.id.includes(currentDisplay.id.toString())
-      );
-
-      if (matchedSource) {
-        targetSource = matchedSource;
-        console.log(
-          `[DEBUG] Found matching display source: ${targetSource.name}`
-        );
-      }
-    }
-  }
-
-  // Generate a data URL from the thumbnail
-  const screenshotDataUrl = targetSource.thumbnail.toDataURL();
+  // Use the first source (primary display)
+  const screenshotDataUrl = sources[0].thumbnail.toDataURL();
 
   // Platform-specific full screen handling
   if (process.platform === "darwin") {
@@ -842,7 +806,7 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
     mainWindow.setFullScreen(true);
   }
 
-  // Tell renderer to start region selection with the screenshot and existing regions
+  // Tell renderer to start region selection with screenshot and existing regions
   mainWindow.webContents.send(
     "start-region-selection",
     slotNumber,
