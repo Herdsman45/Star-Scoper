@@ -78,6 +78,7 @@ CheckFile() {
                     if (InStr(CurrentWindowTitle, RequiredChannel)) {
                         ; We're in the correct channel, paste the call
                         A_Clipboard := DiscordCall
+                        Send("{Backspace 2}")  ; Send 2 backspaces before pasting
                         Send("^v{Enter}")
 
                         ; Wait a moment for the message to send
