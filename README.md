@@ -100,6 +100,37 @@ A specialized OCR (Optical Character Recognition) tool for RuneScape players to 
 - The app can be minimized during capture
 - If using multiple monitors with different scaling settings, check your display settings
 
+### macOS Security Issues
+
+**Important**: Star Scoper is currently **unsigned** and will trigger macOS security warnings. This is expected behavior.
+
+If you see errors like:
+
+- "Star Scoper is not supported on this version of Mac"
+- "Star Scoper cannot be opened because the developer cannot be verified"
+- App won't launch or shows security warnings
+
+**Solutions** (try in order):
+
+1. **Right-click method** (Recommended):
+
+   - Don't double-click the app
+   - Right-click on "Star Scoper.app" → Select "Open"
+   - macOS will show a dialog with an "Open" button → Click "Open"
+
+2. **System Settings method**:
+
+   - Try opening the app normally (it will be blocked)
+   - Go to System Settings → Privacy & Security
+   - Look for "Star Scoper was blocked" → Click "Open Anyway"
+
+3. **Terminal method** (Advanced users):
+   ```bash
+   xattr -dr com.apple.quarantine "/Applications/Star Scoper.app"
+   ```
+
+These workarounds are necessary because the app is not signed with an Apple Developer ID certificate.
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
