@@ -17,6 +17,10 @@ const { SECURITY_CONFIG, SecurityValidators } = require("./security-config");
 // Storage for saved regions and settings
 const store = new Store();
 
+// Enable high-DPI support to get actual screen resolution
+app.commandLine.appendSwitch("high-dpi-support", "true");
+app.commandLine.appendSwitch("force-device-scale-factor", "1");
+
 // Global state
 let mainWindow;
 let widgetWindow = null;
@@ -780,8 +784,34 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
     y: mainWindow.getBounds().y,
   });
 
+  // Get ALL displays for debugging
+  const allDisplays = screen.getAllDisplays();
+  console.log(`[DEBUG] Total displays detected: ${allDisplays.length}`);
+  allDisplays.forEach((display, index) => {
+    console.log(`[DEBUG] Display ${index}:`, {
+      id: display.id,
+      size: `${display.size.width}x${display.size.height}`,
+      scaleFactor: display.scaleFactor,
+      bounds: display.bounds,
+      workArea: display.workArea,
+      rotation: display.rotation,
+    });
+  });
+
   console.log(
     `[DEBUG] App window is on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
+  );
+  console.log(`[DEBUG] Display scale factor: ${currentDisplay.scaleFactor}`);
+  console.log(
+    `[DEBUG] Physical resolution (if scaled): ${Math.round(
+      currentDisplay.size.width * currentDisplay.scaleFactor
+    )}x${Math.round(currentDisplay.size.height * currentDisplay.scaleFactor)}`
+  );
+  console.log(
+    `[DEBUG] Display bounds: x=${currentDisplay.bounds.x}, y=${currentDisplay.bounds.y}, width=${currentDisplay.bounds.width}, height=${currentDisplay.bounds.height}`
+  );
+  console.log(
+    `[DEBUG] Work area: x=${currentDisplay.workArea.x}, y=${currentDisplay.workArea.y}, width=${currentDisplay.workArea.width}, height=${currentDisplay.workArea.height}`
   );
 
   // Capture the screen at full resolution
