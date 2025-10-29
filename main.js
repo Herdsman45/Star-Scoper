@@ -442,9 +442,10 @@ async function captureAndProcess(slotNumber) {
     );
 
     // Use Electron's desktopCapturer to get all screen sources
+    // Capture at actual display resolution to match region coordinates
     const sources = await desktopCapturer.getSources({
       types: ["screen"],
-      thumbnailSize: { width: 1920, height: 1080 },
+      thumbnailSize: currentDisplay.size, // Use actual display size instead of hardcoded 1920x1080
     });
 
     if (sources.length === 0) {
@@ -481,6 +482,10 @@ async function captureAndProcess(slotNumber) {
     const metadata = await image.metadata();
     const imgWidth = metadata.width;
     const imgHeight = metadata.height;
+
+    console.log(
+      `[DEBUG] Captured image size: ${imgWidth}x${imgHeight} (should match display size ${currentDisplay.size.width}x${currentDisplay.size.height})`
+    );
 
     // Validate regions
     const validateRegion = (region) => {
