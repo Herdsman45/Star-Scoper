@@ -56,7 +56,8 @@
     "extraFiles": [
       {
         "from": "eng.traineddata",
-        "to": "eng.traineddata"
+        "to": "Resources/eng.traineddata",
+        "filter": ["**/*"]
       }
     ],
     "mac": {
@@ -65,11 +66,7 @@
         "dmg",
         "zip"
       ],
-      "icon": "build/icon.icns",
-      "hardenedRuntime": false,
-      "gatekeeperAssess": false,
-      "entitlements": "build/entitlements.mac.plist",
-      "entitlementsInherit": "build/entitlements.mac.plist"
+      "icon": "build/icon.icns"
     },
     "win": {
       "target": [
