@@ -2,7 +2,7 @@
 // electronAPI is provided by preload.js through contextBridge
 if (!window.electronAPI) {
   throw new Error(
-    "electronAPI not available - preload script may have failed to load"
+    "electronAPI not available - preload script may have failed to load",
   );
 }
 
@@ -20,7 +20,7 @@ const statusSlot2 = document.getElementById("status-slot2");
 const hotkeySlot1Btn = document.getElementById("hotkey-slot1");
 const hotkeySlot2Btn = document.getElementById("hotkey-slot2");
 const regionSelectionOverlay = document.getElementById(
-  "region-selection-overlay"
+  "region-selection-overlay",
 );
 const selectionSlotNumber = document.getElementById("selection-slot-number");
 const cancelSelectionBtn = document.getElementById("cancel-selection");
@@ -49,10 +49,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   captureSlot1Btn.addEventListener("click", () => captureSlot(1));
   captureSlot2Btn.addEventListener("click", () => captureSlot(2));
   copyRawBtn.addEventListener("click", () =>
-    copyText(rawTextElement.textContent)
+    copyText(rawTextElement.textContent),
   );
   copyProcessedBtn.addEventListener("click", () =>
-    copyText(processedTextElement.textContent)
+    copyText(processedTextElement.textContent),
   );
   cancelSelectionBtn.addEventListener("click", cancelRegionSelection);
   saveRegionsBtn.addEventListener("click", saveSelectedRegions);
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const shortcut = await window.electronAPI.ipc.invoke(
         "get-keyboard-shortcut",
-        1
+        1,
       );
       if (shortcut) {
         hotkeySlot1Btn.textContent = shortcut;
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const shortcut = await window.electronAPI.ipc.invoke(
         "get-keyboard-shortcut",
-        2
+        2,
       );
       if (shortcut) {
         hotkeySlot2Btn.textContent = shortcut;
@@ -119,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await window.electronAPI.ipc.invoke("set-ahk-integration", ahkEnabled);
     if (ahkEnabled) {
       showToast(
-        "Text file output enabled - processed text will be written to file for automation tools"
+        "Text file output enabled - processed text will be written to file for automation tools",
       );
     } else {
       showToast("Text file output disabled");
@@ -127,6 +127,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   // Load settings on startup
   await loadSettings();
+
+  // Display app version (injected at build time from package.json)
+  const versionElement = document.getElementById("app-version");
+  if (versionElement) {
+    versionElement.textContent = "dev";
+  }
+
   // Initialize debug mode toggle
   const settings = await window.electronAPI.ipc.invoke("get-settings");
   debugModeCheckbox.checked = settings.debugMode || false;
@@ -149,14 +156,14 @@ async function setRegions(slotNumber) {
   // Get existing regions if available
   const existingRegions = await window.electronAPI.ipc.invoke(
     "get-regions",
-    slotNumber
+    slotNumber,
   );
 
   // Start region selection with existing regions
   const result = await window.electronAPI.ipc.invoke(
     "set-regions",
     slotNumber,
-    existingRegions
+    existingRegions,
   );
 
   // After regions are set
@@ -274,11 +281,11 @@ async function saveSelectedRegions() {
 
     console.log(
       "[DEBUG] Saving regionA (direct coords):",
-      JSON.stringify(currentRegions.regionA)
+      JSON.stringify(currentRegions.regionA),
     );
     console.log(
       "[DEBUG] Saving regionB (direct coords):",
-      JSON.stringify(currentRegions.regionB)
+      JSON.stringify(currentRegions.regionB),
     );
 
     // Send regions back to main process
@@ -352,7 +359,7 @@ window.electronAPI.ipc.on("debug-images-saved", (info) => {
         closeBtn.onclick = () => {
           window.recentDebugImages.splice(
             window.recentDebugImages.length - 1 - idx,
-            1
+            1,
           );
           recentDiv.removeChild(setDiv);
         };
@@ -404,7 +411,7 @@ window.electronAPI.ipc.on(
         existingRegions.regionA.x,
         existingRegions.regionA.y,
         existingRegions.regionA.width,
-        existingRegions.regionA.height
+        existingRegions.regionA.height,
       );
     } else {
       createResizableBox("Main Dialog Region", "regionA");
@@ -417,12 +424,12 @@ window.electronAPI.ipc.on(
         existingRegions.regionB.x,
         existingRegions.regionB.y,
         existingRegions.regionB.width,
-        existingRegions.regionB.height
+        existingRegions.regionB.height,
       );
     } else {
       createResizableBox("World Line Region", "regionB");
     }
-  }
+  },
 );
 
 // Create a resizable and movable box
@@ -488,7 +495,7 @@ function createResizableBox(label, regionType, x, y, width, height) {
       const boxHeight = parseInt(box.style.height);
 
       console.log(
-        `[DEBUG] Box coordinates (direct screen coords): X=${boxLeft}, Y=${boxTop}, width=${boxWidth}, height=${boxHeight}`
+        `[DEBUG] Box coordinates (direct screen coords): X=${boxLeft}, Y=${boxTop}, width=${boxWidth}, height=${boxHeight}`,
       );
 
       // Return coordinates directly - no scaling needed!

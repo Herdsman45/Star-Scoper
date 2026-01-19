@@ -86,12 +86,12 @@ const electronAPI = {
 try {
   contextBridge.exposeInMainWorld("electronAPI", electronAPI);
   console.log(
-    "[PRELOAD] Successfully exposed secure electron APIs through contextBridge"
+    "[PRELOAD] Successfully exposed secure electron APIs through contextBridge",
   );
 } catch (error) {
   console.warn(
     "[PRELOAD] contextBridge failed, falling back to window object:",
-    error.message
+    error.message,
   );
   // Fallback for when contextIsolation is disabled
   window.electronAPI = electronAPI;

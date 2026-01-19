@@ -1,15 +1,16 @@
 {
   "name": "star-scoper",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Cross-platform OCR tool for screen capture and text processing",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder",
-    "build:win": "electron-builder --win",
-    "build:mac": "electron-builder --mac",
-    "build:linux": "electron-builder --linux",
-    "build:all": "electron-builder -mwl",
+    "prebuild": "node scripts/inject-version.js",
+    "build": "npm run prebuild && electron-builder",
+    "build:win": "npm run prebuild && electron-builder --win",
+    "build:mac": "npm run prebuild && electron-builder --mac",
+    "build:linux": "npm run prebuild && electron-builder --linux",
+    "build:all": "npm run prebuild && electron-builder -mwl",
     "test": "echo \"Error: no test specified\" && exit 1",
     "clean": "node scripts/dev-helper.js clean",
     "check": "node scripts/dev-helper.js check",
@@ -57,7 +58,9 @@
       {
         "from": "eng.traineddata",
         "to": "Resources/eng.traineddata",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {
