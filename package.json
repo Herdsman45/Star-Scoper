@@ -1,6 +1,6 @@
 {
   "name": "star-scoper",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Cross-platform OCR tool for screen capture and text processing",
   "main": "main.js",
   "scripts": {
@@ -22,20 +22,23 @@
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
   },
+  "overrides": {
+    "tar": "^7.5.3"
+  },
   "devDependencies": {
-    "electron": "^38.1.2",
-    "electron-builder": "^24.0.0"
+    "electron": "^40.0.0",
+    "electron-builder": "^26.4.0"
   },
   "dependencies": {
     "csv-writer": "^1.6.0",
-    "electron-store": "^8.1.0",
+    "electron-store": "^11.0.2",
     "png-chunk-text": "^1.0.0",
     "png-chunks-encode": "^1.0.0",
     "png-chunks-extract": "^1.0.0",
     "pngjs": "^7.0.0",
     "screenshot-desktop": "^1.15.2",
-    "sharp": "^0.32.0",
-    "tesseract.js": "^5.0.0"
+    "sharp": "^0.34.5",
+    "tesseract.js": "^7.0.0"
   },
   "build": {
     "appId": "com.starscoper.app",

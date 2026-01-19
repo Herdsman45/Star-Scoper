@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const { createWorker } = require("tesseract.js");
-const Store = require("electron-store");
+const Store = require("electron-store").default;
 const sharp = require("sharp");
 const { SECURITY_CONFIG, SecurityValidators } = require("./security-config");
 
@@ -107,7 +107,7 @@ async function createWindow() {
           ],
         },
       });
-    }
+    },
   );
 
   // Load the UI
@@ -196,7 +196,7 @@ async function createWindow() {
             "Referrer-Policy": ["no-referrer"],
           },
         });
-      }
+      },
     );
 
     widgetWindow.loadFile("widget.html");
@@ -249,7 +249,7 @@ async function createWindow() {
   // Handle widget button click - blur widget to restore previous focus
   ipcMain.on("widget-button-clicked", () => {
     console.log(
-      "[WIDGET] Button clicked, attempting to restore previous focus"
+      "[WIDGET] Button clicked, attempting to restore previous focus",
     );
     if (widgetWindow && !widgetWindow.isDestroyed()) {
       // Brief delay to let the click complete, then blur the widget
@@ -308,7 +308,7 @@ function registerHotkeys() {
         typeof shortcut === "string" &&
         shortcut.trim() !== "" &&
         !["Click to set", "Recording...", "Error - Click to retry"].includes(
-          shortcut
+          shortcut,
         )
       );
     };
@@ -411,14 +411,14 @@ async function captureAndProcess(slotNumber) {
 
     console.log(
       `[DEBUG] Capture slot ${slotNumber}, regions:`,
-      JSON.stringify(regions)
+      JSON.stringify(regions),
     );
 
     if (!regions || !regions.regionA || !regions.regionB) {
       console.log(`[DEBUG] Missing regions for slot ${slotNumber}`);
       mainWindow.webContents.send(
         "status-update",
-        `Slot ${slotNumber} regions not set. Please set regions first.`
+        `Slot ${slotNumber} regions not set. Please set regions first.`,
       );
       isCapturing = false;
       return;
@@ -427,7 +427,7 @@ async function captureAndProcess(slotNumber) {
     // Show visual feedback
     mainWindow.webContents.send(
       "status-update",
-      `Capturing slot ${slotNumber}...`
+      `Capturing slot ${slotNumber}...`,
     );
 
     // Get the current display where the app window is
@@ -438,7 +438,7 @@ async function captureAndProcess(slotNumber) {
     });
 
     console.log(
-      `[DEBUG] Capturing on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
+      `[DEBUG] Capturing on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`,
     );
 
     // Use Electron's desktopCapturer to get all screen sources
@@ -461,13 +461,13 @@ async function captureAndProcess(slotNumber) {
         const matchedSource = sources.find(
           (s) =>
             s.display_id === currentDisplay.id.toString() ||
-            s.id.includes(currentDisplay.id.toString())
+            s.id.includes(currentDisplay.id.toString()),
         );
 
         if (matchedSource) {
           source = matchedSource;
           console.log(
-            `[DEBUG] Found matching display source for capture: ${source.name}`
+            `[DEBUG] Found matching display source for capture: ${source.name}`,
           );
         }
       }
@@ -484,7 +484,7 @@ async function captureAndProcess(slotNumber) {
     const imgHeight = metadata.height;
 
     console.log(
-      `[DEBUG] Captured image size: ${imgWidth}x${imgHeight} (should match display size ${currentDisplay.size.width}x${currentDisplay.size.height})`
+      `[DEBUG] Captured image size: ${imgWidth}x${imgHeight} (should match display size ${currentDisplay.size.width}x${currentDisplay.size.height})`,
     );
 
     // Validate regions
@@ -500,7 +500,7 @@ async function captureAndProcess(slotNumber) {
       console.log(`[DEBUG] Validating region:`, JSON.stringify(region));
       console.log(
         `[DEBUG] Normalized region:`,
-        JSON.stringify(normalizedRegion)
+        JSON.stringify(normalizedRegion),
       );
 
       return (
@@ -513,11 +513,11 @@ async function captureAndProcess(slotNumber) {
 
     if (!validateRegion(regions.regionA) || !validateRegion(regions.regionB)) {
       console.log(
-        `[DEBUG] Region validation failed. Screen size: ${imgWidth}x${imgHeight}`
+        `[DEBUG] Region validation failed. Screen size: ${imgWidth}x${imgHeight}`,
       );
       mainWindow.webContents.send(
         "status-update",
-        `Invalid regions for slot ${slotNumber}. Please reset regions.`
+        `Invalid regions for slot ${slotNumber}. Please reset regions.`,
       );
       isCapturing = false;
       return;
@@ -540,7 +540,7 @@ async function captureAndProcess(slotNumber) {
       };
       console.log(
         `[DEBUG] Extracting regionA with coords:`,
-        JSON.stringify(normalizedA)
+        JSON.stringify(normalizedA),
       );
 
       // Crop and OCR regionA with 3x scaling for better results
@@ -569,14 +569,14 @@ async function captureAndProcess(slotNumber) {
       try {
         ocrA = await ocrWorker.recognize(croppedA);
         console.log(
-          "[DEBUG] RegionA recognized successfully with optimal settings"
+          "[DEBUG] RegionA recognized successfully with optimal settings",
         );
       } catch (error) {
         console.error("[DEBUG] Error with OCR for regionA:", error);
         await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
         ocrA = await ocrWorker.recognize(croppedA);
         console.log(
-          "[DEBUG] RegionA recognized with fallback default settings"
+          "[DEBUG] RegionA recognized with fallback default settings",
         );
       }
 
@@ -589,7 +589,7 @@ async function captureAndProcess(slotNumber) {
       };
       console.log(
         `[DEBUG] Extracting regionB with coords:`,
-        JSON.stringify(normalizedB)
+        JSON.stringify(normalizedB),
       );
       let croppedB;
       try {
@@ -616,14 +616,14 @@ async function captureAndProcess(slotNumber) {
       try {
         ocrB = await ocrWorker.recognize(croppedB);
         console.log(
-          "[DEBUG] RegionB recognized successfully with optimal settings"
+          "[DEBUG] RegionB recognized successfully with optimal settings",
         );
       } catch (error) {
         console.error("[DEBUG] Error with OCR for regionB:", error);
         await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
         ocrB = await ocrWorker.recognize(croppedB);
         console.log(
-          "[DEBUG] RegionB recognized with fallback default settings"
+          "[DEBUG] RegionB recognized with fallback default settings",
         );
       }
       await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
@@ -647,7 +647,7 @@ async function captureAndProcess(slotNumber) {
         // RegionA
         const debugPathA = path.join(
           debugDir,
-          `region_A_${debugTimestamp}.png`
+          `region_A_${debugTimestamp}.png`,
         );
         const metadataA = {
           raw_ocr: ocrA && ocrA.data && ocrA.data.text ? ocrA.data.text : "",
@@ -658,19 +658,19 @@ async function captureAndProcess(slotNumber) {
           const pngWithMetaA = await embedMetadataInPng(croppedA, metadataA);
           fs.writeFileSync(debugPathA, pngWithMetaA);
           console.log(
-            `[DEBUG] Saved regionA image with metadata to ${debugPathA}`
+            `[DEBUG] Saved regionA image with metadata to ${debugPathA}`,
           );
         } catch (err) {
           fs.writeFileSync(debugPathA, croppedA);
           console.error(
             "[DEBUG] Failed to embed metadata in regionA PNG:",
-            err
+            err,
           );
         }
         // RegionB
         const debugPathB = path.join(
           debugDir,
-          `region_B_${debugTimestamp}.png`
+          `region_B_${debugTimestamp}.png`,
         );
         const metadataB = {
           raw_ocr: ocrB && ocrB.data && ocrB.data.text ? ocrB.data.text : "",
@@ -681,13 +681,13 @@ async function captureAndProcess(slotNumber) {
           const pngWithMetaB = await embedMetadataInPng(croppedB, metadataB);
           fs.writeFileSync(debugPathB, pngWithMetaB);
           console.log(
-            `[DEBUG] Saved regionB image with metadata to ${debugPathB}`
+            `[DEBUG] Saved regionB image with metadata to ${debugPathB}`,
           );
         } catch (err) {
           fs.writeFileSync(debugPathB, croppedB);
           console.error(
             "[DEBUG] Failed to embed metadata in regionB PNG:",
-            err
+            err,
           );
         }
         debugImageInfo = {
@@ -717,7 +717,7 @@ async function captureAndProcess(slotNumber) {
         try {
           const ahkFilePath = path.join(
             os.tmpdir(),
-            "star-scoper-discord-call.txt"
+            "star-scoper-discord-call.txt",
           );
           fs.writeFileSync(ahkFilePath, processedText, "utf8");
           console.log(`[AHK] Discord call written to: ${ahkFilePath}`);
@@ -726,7 +726,7 @@ async function captureAndProcess(slotNumber) {
         }
       } else {
         console.log(
-          `[AHK] Skipping auto-paste due to Unknown values in call: ${processedText}`
+          `[AHK] Skipping auto-paste due to Unknown values in call: ${processedText}`,
         );
       }
     }
@@ -746,7 +746,7 @@ async function captureAndProcess(slotNumber) {
       // Show notification about debug images
       mainWindow.webContents.send(
         "status-update",
-        `Debug images saved to: ${debugDir}`
+        `Debug images saved to: ${debugDir}`,
       );
     } else {
       mainWindow.webContents.send("ocr-result", {
@@ -804,19 +804,19 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
   });
 
   console.log(
-    `[DEBUG] App window is on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`
+    `[DEBUG] App window is on display: ${currentDisplay.id}, ${currentDisplay.size.width}x${currentDisplay.size.height}`,
   );
   console.log(`[DEBUG] Display scale factor: ${currentDisplay.scaleFactor}`);
   console.log(
     `[DEBUG] Physical resolution (if scaled): ${Math.round(
-      currentDisplay.size.width * currentDisplay.scaleFactor
-    )}x${Math.round(currentDisplay.size.height * currentDisplay.scaleFactor)}`
+      currentDisplay.size.width * currentDisplay.scaleFactor,
+    )}x${Math.round(currentDisplay.size.height * currentDisplay.scaleFactor)}`,
   );
   console.log(
-    `[DEBUG] Display bounds: x=${currentDisplay.bounds.x}, y=${currentDisplay.bounds.y}, width=${currentDisplay.bounds.width}, height=${currentDisplay.bounds.height}`
+    `[DEBUG] Display bounds: x=${currentDisplay.bounds.x}, y=${currentDisplay.bounds.y}, width=${currentDisplay.bounds.width}, height=${currentDisplay.bounds.height}`,
   );
   console.log(
-    `[DEBUG] Work area: x=${currentDisplay.workArea.x}, y=${currentDisplay.workArea.y}, width=${currentDisplay.workArea.width}, height=${currentDisplay.workArea.height}`
+    `[DEBUG] Work area: x=${currentDisplay.workArea.x}, y=${currentDisplay.workArea.y}, width=${currentDisplay.workArea.width}, height=${currentDisplay.workArea.height}`,
   );
 
   // Capture the screen at full resolution
@@ -826,7 +826,7 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
   });
 
   console.log(
-    `[DEBUG] Captured screen at ${currentDisplay.size.width}x${currentDisplay.size.height}`
+    `[DEBUG] Captured screen at ${currentDisplay.size.width}x${currentDisplay.size.height}`,
   );
 
   // Use the first source (primary display)
@@ -846,7 +846,7 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
     "start-region-selection",
     slotNumber,
     screenshotDataUrl,
-    existingRegions
+    existingRegions,
   );
 
   // Wait for regions from renderer
@@ -859,12 +859,12 @@ ipcMain.handle("set-regions", async (event, slotNumber, existingRegions) => {
         // Save regions
         console.log(
           `[DEBUG] Saving regions for slot ${slotNumber}:`,
-          JSON.stringify(data)
+          JSON.stringify(data),
         );
         store.set(regionsKey, data);
         console.log(
           `[DEBUG] Regions after save:`,
-          JSON.stringify(store.get(regionsKey))
+          JSON.stringify(store.get(regionsKey)),
         );
         resolve({
           success: true,
@@ -1032,7 +1032,7 @@ ipcMain.handle("get-keyboard-shortcut", (event, slotNumber) => {
             "Referrer-Policy": ["no-referrer"],
           },
         });
-      }
+      },
     );
 
     // Set up IPC handlers for the key window
@@ -1148,7 +1148,7 @@ app.whenReady().then(() => {
           // Inform the user that screen capture permissions are needed
           mainWindow.webContents.send(
             "status-update",
-            "Screen recording permission is required. Please enable it in System Preferences > Security & Privacy > Privacy > Screen Recording."
+            "Screen recording permission is required. Please enable it in System Preferences > Security & Privacy > Privacy > Screen Recording.",
           );
         }
       });
