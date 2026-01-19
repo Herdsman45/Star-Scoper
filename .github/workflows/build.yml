@@ -42,14 +42,12 @@ jobs:
       # For Windows builds
       - name: Build Windows App
         if: matrix.os == 'windows-latest'
-        run: |
-          npx electron-builder --win --x64 --publish never
+        run: npm run build:win
 
       # For macOS builds
       - name: Build macOS App
         if: matrix.os == 'macos-latest'
-        run: |
-          npx electron-builder --mac --publish never
+        run: npm run build:mac
 
       # Upload artifacts
       - name: Upload Artifacts
