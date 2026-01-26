@@ -19,6 +19,7 @@ const SECURITY_CONFIG = {
     "toggle-widget",
     "toggle-theme",
     "open-widget",
+    "open-session-log",
     "keybind-save",
     "keybind-cancel",
     "get-theme-preference",
@@ -47,6 +48,7 @@ const SECURITY_CONFIG = {
     "widget-call-update",
     "show-widget-button",
     "theme-preference",
+    "session-log-add-entry",
   ],
 
   // Content Security Policy
@@ -94,7 +96,7 @@ const SecurityValidators = {
 
     const normalizedPath = path.normalize(filePath);
     return SECURITY_CONFIG.ALLOWED_DEBUG_PATHS.some((allowedPath) =>
-      normalizedPath.startsWith(allowedPath)
+      normalizedPath.startsWith(allowedPath),
     );
   },
 

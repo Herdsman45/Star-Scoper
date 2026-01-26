@@ -14,6 +14,7 @@ const ALLOWED_SEND_CHANNELS = [
   "toggle-widget",
   "toggle-theme",
   "open-widget",
+  "open-session-log",
   "keybind-save",
   "keybind-cancel",
   "get-theme-preference",
@@ -43,6 +44,7 @@ const ALLOWED_LISTENER_CHANNELS = [
   "widget-call-update",
   "show-widget-button",
   "theme-preference",
+  "session-log-add-entry",
 ];
 
 // Secure API bridge for renderer processes

@@ -16,6 +16,7 @@ node tests/test-languages.js
 ## Test Files
 
 ### Language-Specific Tests
+
 - **test-german.js** - German OCR pattern tests (Größe, Stunden und Minuten)
 - **test-french.js** - French OCR pattern tests (heures et minutes)
 - **test-portuguese.js** - Portuguese OCR pattern tests (horas e minutos)
@@ -24,17 +25,20 @@ node tests/test-languages.js
 - **test-portuguese-size.js** - Portuguese size descriptor tests
 
 ### General Tests
+
 - **test-languages.js** - Multi-language comparison and benchmarking
 - **test-latest.js** - Latest feature tests
 - **test-german-time.js** - German time-specific tests
 
 ### Debug/Utility Tests
+
 - **test-pattern-check.js** - Pattern matching debug script
 - **test-pattern-check2.js** - Additional pattern testing
 - **test-trace-minutes.js** - Minute pattern tracing
 - **test-trace-pattern.js** - General pattern tracing
 
 ### Setup
+
 - **setup-languages.js** - Download and setup language traineddata files
 
 ## Test Data

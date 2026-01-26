@@ -52,7 +52,7 @@ function prepareRelease() {
     execSync("git diff --quiet && git diff --staged --quiet");
   } catch (error) {
     console.error(
-      "You have uncommitted changes. Please commit or stash them before preparing a release."
+      "You have uncommitted changes. Please commit or stash them before preparing a release.",
     );
     process.exit(1);
   }
@@ -60,7 +60,7 @@ function prepareRelease() {
   // Prompt for version update type
   console.log(`Current version: ${packageJson.version}`);
   console.log(
-    "Please update the version in package.json manually, then commit with:"
+    "Please update the version in package.json manually, then commit with:",
   );
   console.log('git commit -m "Bump version to X.Y.Z"');
   console.log("git tag vX.Y.Z");
@@ -89,7 +89,9 @@ function check() {
   }
 
   // Check for Tesseract data file
-  if (!fs.existsSync(path.join(__dirname, "..", "traineddata", "eng.traineddata"))) {
+  if (
+    !fs.existsSync(path.join(__dirname, "..", "traineddata", "eng.traineddata"))
+  ) {
     console.error("❌ traineddata/eng.traineddata not found");
     allPassed = false;
   } else {
@@ -107,7 +109,7 @@ function check() {
     console.log("All pre-flight checks passed!");
   } else {
     console.error(
-      "Some pre-flight checks failed. Please fix the issues before building."
+      "Some pre-flight checks failed. Please fix the issues before building.",
     );
     process.exit(1);
   }
@@ -118,7 +120,7 @@ function printUsage() {
   console.log("Available commands:");
   console.log(`  ${COMMANDS.CLEAN}: Clean build artifacts`);
   console.log(
-    `  ${COMMANDS.PREPARE_RELEASE}: Update version numbers and prepare for release`
+    `  ${COMMANDS.PREPARE_RELEASE}: Update version numbers and prepare for release`,
   );
   console.log(`  ${COMMANDS.CHECK}: Run pre-flight checks for a build`);
 }

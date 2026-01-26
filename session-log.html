@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Session Log - Star Scoper</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="dark-theme.css" />
+    <style>
+      /* CSS Variables for dark theme */
+      body.dark-theme {
+        --bg-color: #1e1e1e;
+        --bg-secondary: #2d2d2d;
+        --text-color: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --button-bg: #2a5a8a;
+        --button-text: #e0e0e0;
+        --button-hover: #366a9a;
+        --border-color: #3d3d3d;
+      }
+
+      body {
+        margin: 0;
+        padding: 10px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color, #ffffff);
+        color: var(--text-color, #000000);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: var(--bg-secondary, #f0f0f0);
+        border-radius: 5px;
+      }
+
+      .header-left {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: nowrap;
+      }
+
+      .header-right {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .utc-clock {
+        font-size: 14px;
+        font-weight: bold;
+        padding: 8px 16px;
+        background: var(--button-bg, #4a4a4a);
+        color: var(--button-text, #ffffff);
+        border-radius: 4px;
+        border: 1px solid var(--border-color, #666);
+      }
+
+      button {
+        padding: 8px 16px;
+        background: var(--button-bg, #4a4a4a);
+        color: var(--button-text, #ffffff);
+        border: 1px solid var(--border-color, #666);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+        margin-bottom: 0;
+      }
+
+      button:hover {
+        background: var(--button-hover, #5a5a5a);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-secondary, #f0f0f0);
+      }
+
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color, #ddd);
+      }
+
+      th {
+        background: var(--bg-color, #ffffff);
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      th:hover {
+        background: var(--button-hover, #e0e0e0);
+      }
+
+      th.sortable::after {
+        content: " ↕";
+        opacity: 0.3;
+      }
+
+      th.asc::after {
+        content: " ↑";
+        opacity: 1;
+      }
+
+      th.desc::after {
+        content: " ↓";
+        opacity: 1;
+      }
+
+      tbody tr:hover {
+        background: var(--button-hover, #e0e0e0);
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary, #888);
+        font-style: italic;
+      }
+
+      .stats {
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body class="dark-theme">
+    <div class="header">
+      <div class="header-left">
+        <button id="clearBtn">Clear Log</button>
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="copyCodeBlockBtn">Copy Code Block</button>
+        <span class="stats" id="statsLabel">0 worlds logged</span>
+      </div>
+      <div class="header-right">
+        <div class="utc-clock" id="utcClock">UTC: --:--</div>
+      </div>
+    </div>
+
+    <table id="sessionTable">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="0">World</th>
+          <th class="sortable" data-col="1">Region</th>
+          <th class="sortable" data-col="2">Size</th>
+          <th class="sortable" data-col="3">Time (UTC)</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="empty-state">
+          <td colspan="4">
+            No worlds captured yet. Capture a region to populate this log.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script src="session-log.js"></script>
+  </body>
+</html>

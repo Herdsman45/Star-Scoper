@@ -15,6 +15,7 @@ Download language files from:
 https://github.com/tesseract-ocr/tessdata_fast/tree/main
 
 Or use the setup script from the project root:
+
 ```bash
 node tests/setup-languages.js
 ```
