@@ -89,11 +89,11 @@ function check() {
   }
 
   // Check for Tesseract data file
-  if (!fs.existsSync(path.join(__dirname, "..", "eng.traineddata"))) {
-    console.error("❌ eng.traineddata not found");
+  if (!fs.existsSync(path.join(__dirname, "..", "traineddata", "eng.traineddata"))) {
+    console.error("❌ traineddata/eng.traineddata not found");
     allPassed = false;
   } else {
-    console.log("✅ eng.traineddata found");
+    console.log("✅ traineddata/eng.traineddata found");
   }
 
   // Check for node_modules

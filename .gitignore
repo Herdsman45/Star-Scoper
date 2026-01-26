@@ -84,12 +84,15 @@ dist-ssr
 *.sw?
 
 # Tesseract temp files
-# Note: eng.traineddata is needed for the build
-# *.traineddata
-!eng.traineddata
+# traineddata folder is included in the repo
 
 # Image temp files
 tmp/
 
+# Archived/Reference materials
 StarTool/
 Trash/
+
+# Test output files
+tests/*.png
+tests/*.csv
