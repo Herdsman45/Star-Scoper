@@ -19,9 +19,17 @@
       <div class="section">
         <div class="section-header">
           <h2>Quick Capture</h2>
-          <button id="open-widget-btn" class="widget-button">
-            Open Widget
-          </button>
+          <div style="display: flex; gap: 10px">
+            <button id="open-widget-btn" class="widget-button">
+              Open Widget
+            </button>
+            <button id="open-session-log-btn" class="widget-button">
+              Session Log
+            </button>
+            <button id="open-tree-log-btn" class="widget-button">
+              Evil Tree Log
+            </button>
+          </div>
         </div>
         <div class="slots">
           <div class="slot">
@@ -111,6 +119,19 @@
                 <span class="slider"></span>
               </span>
               Text File Output for Automations
+            </label>
+          </div>
+
+          <div class="setting">
+            <label
+              class="toggle-switch-label"
+              title="Enable 3rd capture region for Evil Tree availability time"
+            >
+              <span class="switch">
+                <input type="checkbox" id="evil-tree-capture" />
+                <span class="slider"></span>
+              </span>
+              Enable Evil Tree Capture (Region C)
             </label>
           </div>
 

@@ -37,7 +37,7 @@ jobs:
       - name: Install macOS dependencies
         if: matrix.os == 'macos-latest'
         run: |
-          cp eng.traineddata /tmp/eng.traineddata
+          cp traineddata/eng.traineddata /tmp/eng.traineddata
 
       # For Windows builds
       - name: Build Windows App

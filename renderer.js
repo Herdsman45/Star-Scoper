@@ -28,10 +28,11 @@ const saveRegionsBtn = document.getElementById("save-regions");
 const debugModeCheckbox = document.getElementById("debug-mode");
 const debugStatusText = document.getElementById("debug-status");
 const ahkIntegrationCheckbox = document.getElementById("ahk-integration");
+const evilTreeCaptureCheckbox = document.getElementById("evil-tree-capture");
 
 // Current state
 let currentSlot = null;
-let currentRegions = { regionA: null, regionB: null };
+let currentRegions = { regionA: null, regionB: null, regionC: null };
 let mainContainer;
 let resizableBoxes = [];
 
@@ -125,6 +126,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       showToast("Text file output disabled");
     }
   });
+
+  evilTreeCaptureCheckbox.addEventListener("change", async () => {
+    const evilTreeEnabled = evilTreeCaptureCheckbox.checked;
+    await window.electronAPI.ipc.invoke(
+      "set-evil-tree-capture",
+      evilTreeEnabled,
+    );
+    if (evilTreeEnabled) {
+      showToast("Evil Tree capture enabled - Region C will be captured");
+    } else {
+      showToast("Evil Tree capture disabled");
+    }
+  });
+
   // Load settings on startup
   await loadSettings();
 
@@ -138,6 +153,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const settings = await window.electronAPI.ipc.invoke("get-settings");
   debugModeCheckbox.checked = settings.debugMode || false;
   ahkIntegrationCheckbox.checked = settings.ahkIntegrationEnabled || false;
+  evilTreeCaptureCheckbox.checked = settings.evilTreeCaptureEnabled || false;
   // Set initial status text
   if (debugModeCheckbox.checked) {
     debugStatusText.textContent =
@@ -266,8 +282,14 @@ function cleanupSelectionMode() {
 
 // Save the selected regions
 async function saveSelectedRegions() {
-  if (resizableBoxes.length !== 2) {
-    showToast("Please create both regions first");
+  // Get evil tree setting
+  const settings = await window.electronAPI.ipc.invoke("get-settings");
+  const evilTreeEnabled = settings.evilTreeCaptureEnabled || false;
+
+  const expectedBoxes = evilTreeEnabled ? 3 : 2;
+
+  if (resizableBoxes.length !== expectedBoxes) {
+    showToast(`Please create all ${expectedBoxes} regions first`);
     return;
   }
 
@@ -279,6 +301,12 @@ async function saveSelectedRegions() {
     currentRegions.regionA = await resizableBoxes[0].getCoordinates();
     currentRegions.regionB = await resizableBoxes[1].getCoordinates();
 
+    if (evilTreeEnabled) {
+      currentRegions.regionC = await resizableBoxes[2].getCoordinates();
+    } else {
+      currentRegions.regionC = null;
+    }
+
     console.log(
       "[DEBUG] Saving regionA (direct coords):",
       JSON.stringify(currentRegions.regionA),
@@ -287,12 +315,24 @@ async function saveSelectedRegions() {
       "[DEBUG] Saving regionB (direct coords):",
       JSON.stringify(currentRegions.regionB),
     );
+    if (evilTreeEnabled) {
+      console.log(
+        "[DEBUG] Saving regionC (direct coords):",
+        JSON.stringify(currentRegions.regionC),
+      );
+    }
 
     // Send regions back to main process
-    window.electronAPI.ipc.send("regions-selected", {
+    const regionsToSend = {
       regionA: currentRegions.regionA,
       regionB: currentRegions.regionB,
-    });
+    };
+
+    if (evilTreeEnabled) {
+      regionsToSend.regionC = currentRegions.regionC;
+    }
+
+    window.electronAPI.ipc.send("regions-selected", regionsToSend);
 
     // Clean up
     cleanupSelectionMode();
@@ -390,7 +430,7 @@ window.electronAPI.ipc.on("status-update", (message) => {
 // Region selection handling with resizable boxes
 window.electronAPI.ipc.on(
   "start-region-selection",
-  (slotNumber, screenshotDataUrl, existingRegions) => {
+  async (slotNumber, screenshotDataUrl, existingRegions) => {
     currentSlot = slotNumber;
     mainContainer = document.querySelector(".container");
     mainContainer.style.opacity = "0"; // Hide main content
@@ -403,7 +443,11 @@ window.electronAPI.ipc.on(
     regionSelectionOverlay.style.backgroundRepeat = "no-repeat";
     document.body.style.overflow = "hidden"; // Prevent scrolling
 
-    // Create two resizable boxes - using direct coordinates (1:1 with screen)
+    // Get evil tree setting
+    const settings = await window.electronAPI.ipc.invoke("get-settings");
+    const evilTreeEnabled = settings.evilTreeCaptureEnabled || false;
+
+    // Create resizable boxes - using direct coordinates (1:1 with screen)
     if (existingRegions && existingRegions.regionA) {
       createResizableBox(
         "Main Dialog Region",
@@ -429,6 +473,22 @@ window.electronAPI.ipc.on(
     } else {
       createResizableBox("World Line Region", "regionB");
     }
+
+    // Create Region C if evil tree capture is enabled
+    if (evilTreeEnabled) {
+      if (existingRegions && existingRegions.regionC) {
+        createResizableBox(
+          "Evil Tree Time Region",
+          "regionC",
+          existingRegions.regionC.x,
+          existingRegions.regionC.y,
+          existingRegions.regionC.width,
+          existingRegions.regionC.height,
+        );
+      } else {
+        createResizableBox("Evil Tree Time Region", "regionC");
+      }
+    }
   },
 );
 
@@ -441,14 +501,56 @@ function createResizableBox(label, regionType, x, y, width, height) {
   box.setAttribute("data-region-type", regionType);
 
   // Use provided coordinates or defaults
-  const offsetX = x !== undefined ? x : regionType === "regionA" ? 100 : 200;
-  const offsetY = y !== undefined ? y : regionType === "regionA" ? 100 : 200;
+  let offsetX, offsetY;
+  if (x !== undefined) {
+    offsetX = x;
+  } else if (regionType === "regionA") {
+    offsetX = 100;
+  } else if (regionType === "regionB") {
+    offsetX = 200;
+  } else if (regionType === "regionC") {
+    offsetX = 300;
+  } else {
+    offsetX = 150;
+  }
 
-  // Set different default sizes for the two region types if not provided
-  const defaultWidth =
-    width !== undefined ? width : regionType === "regionA" ? 200 : 150;
-  const defaultHeight =
-    height !== undefined ? height : regionType === "regionA" ? 100 : 15;
+  if (y !== undefined) {
+    offsetY = y;
+  } else if (regionType === "regionA") {
+    offsetY = 100;
+  } else if (regionType === "regionB") {
+    offsetY = 200;
+  } else if (regionType === "regionC") {
+    offsetY = 150;
+  } else {
+    offsetY = 150;
+  }
+
+  // Set different default sizes for the region types if not provided
+  let defaultWidth, defaultHeight;
+  if (width !== undefined) {
+    defaultWidth = width;
+  } else if (regionType === "regionA") {
+    defaultWidth = 200;
+  } else if (regionType === "regionB") {
+    defaultWidth = 150;
+  } else if (regionType === "regionC") {
+    defaultWidth = 180;
+  } else {
+    defaultWidth = 200;
+  }
+
+  if (height !== undefined) {
+    defaultHeight = height;
+  } else if (regionType === "regionA") {
+    defaultHeight = 100;
+  } else if (regionType === "regionB") {
+    defaultHeight = 15;
+  } else if (regionType === "regionC") {
+    defaultHeight = 15;
+  } else {
+    defaultHeight = 100;
+  }
 
   box.style.left = offsetX + "px";
   box.style.top = offsetY + "px";
@@ -572,13 +674,13 @@ function startResize(e, box, handlePos) {
   const boxWidth = parseInt(box.style.width) || 200;
   const boxHeight = parseInt(box.style.height) || 100;
 
-  // Get the box type (World Line region can be smaller)
-  const isWorldLineRegion = box
-    .querySelector(".box-label")
-    ?.textContent.includes("World Line");
-  // Allow World Line box to be MUCH smaller - even 1x1 pixels
-  const minWidth = isWorldLineRegion ? 1 : 50;
-  const minHeight = isWorldLineRegion ? 1 : 40;
+  // Get the box type (World Line and Evil Tree regions can be smaller)
+  const labelText = box.querySelector(".box-label")?.textContent || "";
+  const isSingleLineRegion =
+    labelText.includes("World Line") || labelText.includes("Evil Tree");
+  // Allow single-line regions to be MUCH smaller - even 1x1 pixels
+  const minWidth = isSingleLineRegion ? 1 : 50;
+  const minHeight = isSingleLineRegion ? 1 : 40;
 
   // Mouse move handler for resizing
   function moveHandler(e) {

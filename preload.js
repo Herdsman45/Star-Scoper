@@ -14,6 +14,8 @@ const ALLOWED_SEND_CHANNELS = [
   "toggle-widget",
   "toggle-theme",
   "open-widget",
+  "open-session-log",
+  "open-tree-log",
   "keybind-save",
   "keybind-cancel",
   "get-theme-preference",
@@ -26,6 +28,7 @@ const ALLOWED_INVOKE_CHANNELS = [
   "get-keyboard-shortcut",
   "set-debug-mode",
   "set-ahk-integration",
+  "set-evil-tree-capture",
   "save-settings",
   "get-regions",
   "set-regions",
@@ -43,6 +46,8 @@ const ALLOWED_LISTENER_CHANNELS = [
   "widget-call-update",
   "show-widget-button",
   "theme-preference",
+  "tree-log-add-entry",
+  "session-log-add-entry",
 ];
 
 // Secure API bridge for renderer processes

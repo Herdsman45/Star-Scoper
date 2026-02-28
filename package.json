@@ -56,8 +56,29 @@
     ],
     "extraFiles": [
       {
-        "from": "eng.traineddata",
+        "from": "traineddata/eng.traineddata",
         "to": "Resources/eng.traineddata",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "traineddata/fra.traineddata",
+        "to": "Resources/fra.traineddata",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "traineddata/por.traineddata",
+        "to": "Resources/por.traineddata",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "traineddata/deu.traineddata",
+        "to": "Resources/deu.traineddata",
         "filter": [
           "**/*"
         ]

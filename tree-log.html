@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Evil Tree Log - Star Scoper</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="dark-theme.css" />
+    <style>
+      /* CSS Variables for dark theme */
+      body.dark-theme {
+        --bg-color: #1e1e1e;
+        --bg-secondary: #2d2d2d;
+        --text-color: #e0e0e0;
+        --text-secondary: #a0a0a0;
+        --button-bg: #2a5a8a;
+        --button-text: #e0e0e0;
+        --button-hover: #366a9a;
+        --border-color: #3d3d3d;
+        --ready-color: #66bb6a;
+        --soon-color: #ffa726;
+      }
+
+      body {
+        margin: 0;
+        padding: 10px;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background-color: var(--bg-color, #ffffff);
+        color: var(--text-color, #000000);
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: var(--bg-secondary, #f0f0f0);
+        border-radius: 5px;
+      }
+
+      .header-left {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: nowrap;
+      }
+
+      .header-right {
+        display: flex;
+        flex-direction: row;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .utc-clock {
+        font-size: 14px;
+        font-weight: bold;
+        padding: 8px 16px;
+        background: var(--button-bg, #4a4a4a);
+        color: var(--button-text, #ffffff);
+        border-radius: 4px;
+        border: 1px solid var(--border-color, #666);
+      }
+
+      button {
+        padding: 8px 16px;
+        background: var(--button-bg, #4a4a4a);
+        color: var(--button-text, #ffffff);
+        border: 1px solid var(--border-color, #666);
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        white-space: nowrap;
+        margin-bottom: 0;
+      }
+
+      button:hover {
+        background: var(--button-hover, #5a5a5a);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--bg-secondary, #f0f0f0);
+      }
+
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid var(--border-color, #ddd);
+      }
+
+      th {
+        background: var(--bg-color, #ffffff);
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+      }
+
+      th:hover {
+        background: var(--button-hover, #e0e0e0);
+      }
+
+      th.sortable::after {
+        content: " ↕";
+        opacity: 0.3;
+      }
+
+      th.asc::after {
+        content: " ↑";
+        opacity: 1;
+      }
+
+      th.desc::after {
+        content: " ↓";
+        opacity: 1;
+      }
+
+      tbody tr:hover {
+        background: var(--button-hover, #e0e0e0);
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: var(--text-secondary, #888);
+        font-style: italic;
+      }
+
+      .stats {
+        font-size: 13px;
+        color: var(--text-secondary, #888);
+        white-space: nowrap;
+      }
+
+      /* Color coding for countdown */
+      .ready {
+        color: var(--ready-color, #66bb6a);
+        font-weight: bold;
+      }
+
+      .soon {
+        color: var(--soon-color, #ffa726);
+        font-weight: bold;
+      }
+
+      .expired {
+        color: #ef5350;
+        font-weight: bold;
+      }
+
+      .expired-row {
+        opacity: 0.5;
+        text-decoration: line-through;
+      }
+
+      .typed-row {
+        background: rgba(102, 187, 106, 0.15) !important;
+      }
+
+      .typed-row:hover {
+        background: rgba(102, 187, 106, 0.25) !important;
+      }
+
+      select.type-dropdown {
+        background: var(--bg-secondary, #2d2d2d);
+        color: var(--text-color, #e0e0e0);
+        border: 1px solid var(--border-color, #3d3d3d);
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+
+      select.type-dropdown:focus {
+        outline: 2px solid var(--button-bg, #2a5a8a);
+      }
+
+      .world-type-members {
+        color: #64b5f6;
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .world-type-f2p {
+        color: #81c784;
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .delete-btn {
+        padding: 2px 8px;
+        font-size: 18px;
+        line-height: 1;
+        background: #e57373;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+
+      .delete-btn:hover {
+        background: #ef5350;
+      }
+
+      .section-header {
+        background: var(--bg-color, #1a1a1a) !important;
+        font-weight: bold;
+        text-align: center;
+        color: var(--button-bg, #2a5a8a);
+        border-top: 2px solid var(--border-color, #3d3d3d);
+        border-bottom: 2px solid var(--border-color, #3d3d3d);
+      }
+
+      .section-header td {
+        padding: 8px;
+        font-size: 14px;
+      }
+
+      .manual-entry {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 10px;
+        background: var(--bg-secondary, #2d2d2d);
+        border-radius: 5px;
+      }
+
+      .manual-entry label {
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .manual-entry input {
+        padding: 6px 10px;
+        background: var(--bg-color, #1e1e1e);
+        color: var(--text-color, #e0e0e0);
+        border: 1px solid var(--border-color, #3d3d3d);
+        border-radius: 4px;
+        font-size: 13px;
+        width: 80px;
+      }
+
+      .manual-entry input:focus {
+        outline: 2px solid var(--button-bg, #2a5a8a);
+      }
+
+      .manual-entry button {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body class="dark-theme">
+    <div class="header">
+      <div class="header-left">
+        <button id="clearBtn">Clear Log</button>
+        <button id="exportCsvBtn">Export CSV</button>
+        <button id="copyCodeBlockBtn">Copy Discord List</button>
+        <button id="splitToggleBtn">Split by Type</button>
+        <span class="stats" id="statsLabel">0 trees logged</span>
+      </div>
+      <div class="header-right">
+        <div class="utc-clock" id="utcClock">UTC: --:--</div>
+      </div>
+    </div>
+
+    <div class="manual-entry">
+      <label for="manualWorld">World:</label>
+      <input type="number" id="manualWorld" placeholder="" min="1" max="300" />
+      <label for="manualMins">Mins:</label>
+      <input
+        type="number"
+        id="manualMins"
+        placeholder=""
+        min="-100"
+        max="200"
+      />
+      <button id="addManualBtn">Add Entry</button>
+    </div>
+
+    <table id="treeTable">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="0">World</th>
+          <th class="sortable" data-col="1">Type</th>
+          <th class="sortable" data-col="2">Available Time (UTC)</th>
+          <th class="sortable" data-col="3">Minutes Until</th>
+          <th>Tree Type</th>
+          <th>Delete</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="empty-state">
+          <td colspan="6">
+            No trees captured yet. Capture a region to populate this log.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <script src="worlds.js"></script>
+    <script src="tree-log.js"></script>
+  </body>
+</html>

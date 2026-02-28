@@ -14,11 +14,15 @@ const SECURITY_CONFIG = {
     "regions-selected",
     "cancel-region-selection",
     "widget-capture",
+    "widget-button-clicked",
     "open-debug-folder",
+    "open-ground-truth-folder",
     "save-settings",
     "toggle-widget",
     "toggle-theme",
     "open-widget",
+    "open-session-log",
+    "open-tree-log",
     "keybind-save",
     "keybind-cancel",
     "get-theme-preference",
@@ -28,8 +32,13 @@ const SECURITY_CONFIG = {
     "get-settings",
     "get-display-info",
     "get-debug-dir",
+    "get-ground-truth-dir",
     "get-keyboard-shortcut",
     "set-debug-mode",
+    "set-ground-truth-mode",
+    "save-ground-truth",
+    "set-ahk-integration",
+    "set-evil-tree-capture",
     "save-settings",
     "get-regions",
     "set-regions",
@@ -39,6 +48,7 @@ const SECURITY_CONFIG = {
   ALLOWED_LISTENER_CHANNELS: [
     "settings-loaded",
     "debug-images-saved",
+    "ground-truth-data",
     "capture-result",
     "theme-changed",
     "ocr-result",
@@ -47,6 +57,8 @@ const SECURITY_CONFIG = {
     "widget-call-update",
     "show-widget-button",
     "theme-preference",
+    "session-log-add-entry",
+    "tree-log-add-entry",
   ],
 
   // Content Security Policy
@@ -94,7 +106,7 @@ const SecurityValidators = {
 
     const normalizedPath = path.normalize(filePath);
     return SECURITY_CONFIG.ALLOWED_DEBUG_PATHS.some((allowedPath) =>
-      normalizedPath.startsWith(allowedPath)
+      normalizedPath.startsWith(allowedPath),
     );
   },
 
