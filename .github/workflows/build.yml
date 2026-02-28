@@ -6,6 +6,7 @@ on:
       - "v*" # Will trigger when you push a tag like v1.0.0
     branches:
       - main # Also build on main branch pushes for testing
+      - dev # Also build on dev branch pushes for testing
 
 permissions:
   contents: write
