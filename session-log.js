@@ -3,8 +3,41 @@
  * Uses localStorage for persistence (auto-expires after session)
  */
 
-// Storage key
+// Storage keys
 const STORAGE_KEY = "starScoper_sessionLog";
+const SPLIT_MODE_KEY = "starScoper_sessionLog_splitMode";
+
+// Worlds data (Members/Free-to-play)
+let worldTypeMap = new Map();
+
+// Load worlds data from global WORLDS_DATA (loaded via worlds.js script)
+function loadWorldsData() {
+  if (typeof WORLDS_DATA !== "undefined") {
+    WORLDS_DATA.forEach((world) => {
+      worldTypeMap.set(world.id, world.type);
+    });
+  } else {
+    console.error("WORLDS_DATA not found. Make sure worlds.js is loaded.");
+  }
+}
+
+// Get world type
+function getWorldType(worldId) {
+  // Convert to number since worlds.json has numeric IDs but OCR might give strings
+  const numericId =
+    typeof worldId === "string" ? parseInt(worldId, 10) : worldId;
+  return worldTypeMap.get(numericId) || "Unknown";
+}
+
+// Get/set split mode
+function getSplitMode() {
+  const saved = localStorage.getItem(SPLIT_MODE_KEY);
+  return saved === "true";
+}
+
+function setSplitMode(enabled) {
+  localStorage.setItem(SPLIT_MODE_KEY, String(enabled));
+}
 
 // Load data from localStorage
 function loadSessionData() {
@@ -45,22 +78,77 @@ function padRight(str, len) {
 function renderTable() {
   const tbody = document.getElementById("tableBody");
   const data = loadSessionData();
+  const splitMode = getSplitMode();
 
   if (data.length === 0) {
     tbody.innerHTML =
-      '<tr class="empty-state"><td colspan="4">No worlds captured yet. Capture a region to populate this log.</td></tr>';
+      '<tr class="empty-state"><td colspan="6">No worlds captured yet. Capture a region to populate this log.</td></tr>';
     document.getElementById("statsLabel").textContent = "0 worlds logged";
     return;
   }
 
+  // If split mode, separate by type
+  let membersData = [];
+  let f2pData = [];
+
+  if (splitMode) {
+    data.forEach((entry) => {
+      const type = getWorldType(entry.world);
+      if (type === "Members") {
+        membersData.push(entry);
+      } else {
+        f2pData.push(entry);
+      }
+    });
+  }
+
   tbody.innerHTML = "";
-  data.forEach((entry) => {
-    const row = tbody.insertRow();
-    row.insertCell(0).textContent = entry.world;
-    row.insertCell(1).textContent = entry.region;
-    row.insertCell(2).textContent = entry.size;
-    row.insertCell(3).textContent = formatUTCTime(entry.landingTime);
-  });
+
+  const renderEntries = (entries, sectionLabel = null) => {
+    if (sectionLabel && entries.length > 0) {
+      const headerRow = tbody.insertRow();
+      headerRow.className = "section-header";
+      const headerCell = headerRow.insertCell(0);
+      headerCell.colSpan = 6;
+      headerCell.textContent = sectionLabel;
+    }
+
+    entries.forEach((entry) => {
+      const row = tbody.insertRow();
+      row.insertCell(0).textContent = entry.world;
+
+      const typeCell = row.insertCell(1);
+      const worldType = getWorldType(entry.world);
+      typeCell.textContent = worldType === "Members" ? "M" : "F2P";
+      typeCell.className =
+        worldType === "Members" ? "world-type-members" : "world-type-f2p";
+
+      row.insertCell(2).textContent = entry.region;
+      row.insertCell(3).textContent = entry.size;
+      row.insertCell(4).textContent = formatUTCTime(entry.landingTime);
+
+      // Add delete button
+      const deleteCell = row.insertCell(5);
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.textContent = "×";
+      deleteBtn.title = "Delete this entry";
+      deleteBtn.addEventListener("click", () => {
+        deleteEntry(entry.world);
+      });
+      deleteCell.appendChild(deleteBtn);
+    });
+  };
+
+  if (splitMode) {
+    renderEntries(
+      membersData,
+      membersData.length > 0 ? "Members Worlds" : null,
+    );
+    renderEntries(f2pData, f2pData.length > 0 ? "Free-to-Play Worlds" : null);
+  } else {
+    renderEntries(data);
+  }
 
   document.getElementById("statsLabel").textContent =
     `${data.length} world${data.length === 1 ? "" : "s"} logged`;
@@ -90,6 +178,14 @@ function addEntry(world, region, size, relativeTime) {
   renderTable();
 }
 
+// Delete entry
+function deleteEntry(world) {
+  const data = loadSessionData();
+  const filtered = data.filter((e) => e.world !== world);
+  saveSessionData(filtered);
+  renderTable();
+}
+
 // Clear all data
 function clearLog() {
   if (confirm("Clear all logged worlds?")) {
@@ -106,9 +202,11 @@ function exportToCsv() {
     return;
   }
 
-  let csv = "World,Region,Size,Time (UTC)\n";
+  let csv = "World,Type,Region,Size,Time (UTC)\n";
   data.forEach((entry) => {
-    csv += `${entry.world},"${entry.region}",${entry.size},${formatUTCTime(entry.landingTime)}\n`;
+    const worldType = getWorldType(entry.world);
+    const typeStr = worldType === "Members" ? "M" : "F2P";
+    csv += `${entry.world},${typeStr},"${entry.region}",${entry.size},${formatUTCTime(entry.landingTime)}\n`;
   });
 
   const blob = new Blob([csv], { type: "text/csv" });
@@ -121,6 +219,15 @@ function exportToCsv() {
   URL.revokeObjectURL(url);
 }
 
+// Toggle split mode
+function toggleSplitMode() {
+  const enabled = !getSplitMode();
+  setSplitMode(enabled);
+  const btn = document.getElementById("splitToggleBtn");
+  btn.textContent = enabled ? "Show Mixed" : "Split by Type";
+  renderTable();
+}
+
 // Copy as Discord code block
 function copyCodeBlock() {
   const data = loadSessionData();
@@ -129,25 +236,29 @@ function copyCodeBlock() {
     return;
   }
 
-  // Column widths: World(5), Region(28), Size(7), Time(5)
-  const colWidths = [5, 28, 7, 5];
+  // Column widths: World(5), Type(4), Region(28), Size(7), Time(5)
+  const colWidths = [5, 4, 28, 7, 5];
   let lines = [];
 
   // Header
   lines.push(
     padRight("W", colWidths[0]) +
-      padRight("Region", colWidths[1]) +
-      padRight("Size", colWidths[2]) +
-      padRight("Time", colWidths[3]),
+      padRight("Type", colWidths[1]) +
+      padRight("Region", colWidths[2]) +
+      padRight("Size", colWidths[3]) +
+      padRight("Time", colWidths[4]),
   );
 
   // Rows
   data.forEach((entry) => {
+    const worldType = getWorldType(entry.world);
+    const typeStr = worldType === "Members" ? "M" : "F2P";
     lines.push(
       padRight(String(entry.world), colWidths[0]) +
-        padRight(entry.region, colWidths[1]) +
-        padRight(String(entry.size), colWidths[2]) +
-        padRight(formatUTCTime(entry.landingTime), colWidths[3]),
+        padRight(typeStr, colWidths[1]) +
+        padRight(entry.region, colWidths[2]) +
+        padRight(String(entry.size), colWidths[3]) +
+        padRight(formatUTCTime(entry.landingTime), colWidths[4]),
     );
   });
 
@@ -178,8 +289,9 @@ function setupSorting() {
   headers.forEach((header) => {
     header.addEventListener("click", () => {
       const col = parseInt(header.dataset.col);
-      const data = loadSessionData();
+      let data = loadSessionData();
       const isAscending = header.classList.contains("asc");
+      const splitMode = getSplitMode();
 
       // Clear all sort indicators
       headers.forEach((h) => h.classList.remove("asc", "desc"));
@@ -189,7 +301,7 @@ function setupSorting() {
       header.classList.toggle("desc", isAscending);
 
       // Sort data
-      data.sort((a, b) => {
+      const sortFn = (a, b) => {
         let valA, valB;
         switch (col) {
           case 0:
@@ -197,14 +309,18 @@ function setupSorting() {
             valB = b.world;
             break;
           case 1:
+            valA = getWorldType(a.world);
+            valB = getWorldType(b.world);
+            break;
+          case 2:
             valA = a.region;
             valB = b.region;
             break;
-          case 2:
+          case 3:
             valA = a.size;
             valB = b.size;
             break;
-          case 3:
+          case 4:
             valA = a.landingTime;
             valB = b.landingTime;
             break;
@@ -217,7 +333,22 @@ function setupSorting() {
             ? String(valB).localeCompare(String(valA))
             : String(valA).localeCompare(String(valB));
         }
-      });
+      };
+
+      if (splitMode) {
+        // Sort within each section
+        const membersData = data.filter(
+          (e) => getWorldType(e.world) === "Members",
+        );
+        const f2pData = data.filter((e) => getWorldType(e.world) !== "Members");
+
+        membersData.sort(sortFn);
+        f2pData.sort(sortFn);
+
+        data = [...membersData, ...f2pData];
+      } else {
+        data.sort(sortFn);
+      }
 
       saveSessionData(data);
       renderTable();
@@ -235,6 +366,14 @@ function updateClock() {
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
+  loadWorldsData();
+
+  // Set initial split button text
+  const splitBtn = document.getElementById("splitToggleBtn");
+  if (splitBtn) {
+    splitBtn.textContent = getSplitMode() ? "Show Mixed" : "Split by Type";
+  }
+
   renderTable();
   setupSorting();
   updateClock();
@@ -248,6 +387,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("copyCodeBlockBtn")
     .addEventListener("click", copyCodeBlock);
+  document
+    .getElementById("splitToggleBtn")
+    .addEventListener("click", toggleSplitMode);
 
   // Listen for new entries from main process
   window.electronAPI.ipc.on(

@@ -25,6 +25,7 @@ app.commandLine.appendSwitch("force-device-scale-factor", "1");
 let mainWindow;
 let widgetWindow = null;
 let sessionLogWindow = null;
+let treeLogWindow = null;
 let lastWidgetCall = "";
 let ocrWorker;
 let isCapturing = false;
@@ -92,6 +93,11 @@ async function createWindow() {
     openSessionLogWindow();
   });
 
+  // Listen for tree log open request
+  ipcMain.on("open-tree-log", () => {
+    openTreeLogWindow();
+  });
+
   // Close widget and session log if main window is closed
   mainWindow.on("close", () => {
     if (widgetWindow && !widgetWindow.isDestroyed()) {
@@ -99,6 +105,9 @@ async function createWindow() {
     }
     if (sessionLogWindow && !sessionLogWindow.isDestroyed()) {
       sessionLogWindow.close();
+    }
+    if (treeLogWindow && !treeLogWindow.isDestroyed()) {
+      treeLogWindow.close();
     }
   });
 
@@ -305,6 +314,75 @@ async function createWindow() {
     sessionLogWindow.on("closed", () => {
       console.log("[SESSION_LOG] Session log window closed");
       sessionLogWindow = null;
+    });
+  }
+
+  // Create the evil tree log window
+  function openTreeLogWindow() {
+    if (treeLogWindow && !treeLogWindow.isDestroyed()) {
+      treeLogWindow.focus();
+      return;
+    }
+
+    // Get saved window bounds or use defaults
+    const savedBounds = store.get("treeLogBounds", {
+      width: 600,
+      height: 450,
+      x: undefined,
+      y: undefined,
+    });
+
+    treeLogWindow = new BrowserWindow({
+      width: savedBounds.width,
+      height: savedBounds.height,
+      x: savedBounds.x,
+      y: savedBounds.y,
+      autoHideMenuBar: true,
+      title: "Evil Tree Log - Star Scoper",
+      icon: path.join(__dirname, "build/icon.ico"),
+      webPreferences: {
+        preload: path.join(__dirname, "preload.js"),
+        ...SECURITY_CONFIG.WINDOW_SECURITY_PREFS,
+      },
+    });
+
+    // Save window bounds when resized or moved
+    treeLogWindow.on("resize", () => {
+      const bounds = treeLogWindow.getBounds();
+      store.set("treeLogBounds", bounds);
+    });
+
+    treeLogWindow.on("move", () => {
+      const bounds = treeLogWindow.getBounds();
+      store.set("treeLogBounds", bounds);
+    });
+
+    // Set CSP headers
+    treeLogWindow.webContents.session.webRequest.onHeadersReceived(
+      (details, callback) => {
+        callback({
+          responseHeaders: {
+            ...details.responseHeaders,
+            "Content-Security-Policy": [SECURITY_CONFIG.CSP_POLICY],
+            "X-Content-Type-Options": ["nosniff"],
+            "X-Frame-Options": ["DENY"],
+            "X-XSS-Protection": ["1; mode=block"],
+            "Referrer-Policy": ["no-referrer"],
+          },
+        });
+      },
+    );
+
+    treeLogWindow.loadFile("tree-log.html");
+    treeLogWindow.setMenuBarVisibility(false);
+
+    treeLogWindow.webContents.on("did-finish-load", () => {
+      console.log("[TREE_LOG] Tree log window finished loading");
+    });
+
+    treeLogWindow.on("closed", () => {
+      console.log("[TREE_LOG] Tree log window closed");
+      treeLogWindow = null;
     });
   }
 
@@ -737,6 +815,69 @@ async function captureAndProcess(slotNumber) {
       }
       await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
 
+      // Process Region C if evil tree capture is enabled
+      let ocrC = null;
+      let croppedC = null;
+      const evilTreeEnabled = store.get("evilTreeCaptureEnabled", false);
+
+      if (evilTreeEnabled && regions.regionC) {
+        console.log("[DEBUG] Evil tree capture enabled, processing Region C");
+
+        // Normalize coordinates for regionC
+        const normalizedC = {
+          left: Math.floor(Math.abs(regions.regionC.x)),
+          top: Math.floor(Math.abs(regions.regionC.y)),
+          width: Math.floor(regions.regionC.width),
+          height: Math.floor(regions.regionC.height),
+        };
+        console.log(
+          `[DEBUG] Extracting regionC with coords:`,
+          JSON.stringify(normalizedC),
+        );
+
+        // Crop and resize regionC (using same scale as regionB for simple text)
+        try {
+          croppedC = await image
+            .clone()
+            .extract(normalizedC)
+            .resize({
+              width: normalizedC.width * activeScaleFactor,
+              height: normalizedC.height * activeScaleFactor,
+              fit: "fill",
+            })
+            .png()
+            .toBuffer();
+          console.log(
+            `[DEBUG] Resized regionC (${activeScaleFactor}x) for OCR`,
+          );
+        } catch (err) {
+          console.error("[DEBUG] Error in regionC image processing:", err);
+          croppedC = await image.clone().extract(normalizedC).png().toBuffer();
+        }
+
+        // OCR for regionC (simple alphanumeric + colon)
+        console.log("[DEBUG] About to recognize regionC with Tesseract");
+        await ocrWorker.setParameters({
+          tessedit_char_whitelist:
+            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz: ",
+        });
+        const regionCStart = Date.now();
+        try {
+          ocrC = await ocrWorker.recognize(croppedC);
+          const regionCTime = Date.now() - regionCStart;
+          console.log(
+            `[DEBUG] RegionC recognized successfully in ${regionCTime}ms`,
+          );
+          console.log(`[DEBUG] RegionC text: "${ocrC.data.text}"`);
+        } catch (error) {
+          console.error("[DEBUG] Error with OCR for regionC:", error);
+          await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
+          ocrC = await ocrWorker.recognize(croppedC);
+          console.log("[DEBUG] RegionC recognized with fallback settings");
+        }
+        await ocrWorker.setParameters({ tessedit_char_whitelist: "" });
+      }
+
       // Combine raw text
       rawText = `Region A:\n${ocrA.data.text}\n\nRegion B:\n${ocrB.data.text}`;
       console.log("[DEBUG] Raw OCR text:", rawText);
@@ -789,6 +930,45 @@ async function captureAndProcess(slotNumber) {
         }
       } catch (logError) {
         console.error("[SESSION_LOG] Error sending to session log:", logError);
+      }
+
+      // Extract and send data to tree log if evil tree capture is enabled
+      if (evilTreeEnabled && ocrC && ocrC.data && ocrC.data.text) {
+        try {
+          const { parseEvilTreeTime } = require("./lib/evil-tree-parser");
+          const { extractWorldNumber } = require("./lib/star-formatter");
+
+          const world = extractWorldNumber(ocrB.data.text);
+          const treeTime = parseEvilTreeTime(ocrC.data.text);
+
+          console.log("[TREE_LOG] Extracted data:", {
+            world,
+            treeTime,
+            treeTimeReadable: treeTime
+              ? new Date(treeTime).toISOString()
+              : null,
+          });
+
+          // Send to tree log window if open and data is valid
+          if (
+            treeLogWindow &&
+            !treeLogWindow.isDestroyed() &&
+            world !== "Unknown" &&
+            treeTime !== null
+          ) {
+            console.log("[TREE_LOG] Sending to tree log window");
+            treeLogWindow.webContents.send("tree-log-add-entry", {
+              world,
+              treeTime,
+            });
+          } else {
+            console.log(
+              "[TREE_LOG] Tree log window not open or data is invalid",
+            );
+          }
+        } catch (treeLogError) {
+          console.error("[TREE_LOG] Error sending to tree log:", treeLogError);
+        }
       }
 
       // Save debug images for regionA and regionB with metadata after processedText is available
@@ -1101,6 +1281,7 @@ ipcMain.handle("get-settings", async (event) => {
     debugMode: store.get("debugMode", false),
     darkTheme: store.get("darkTheme", true),
     ahkIntegrationEnabled: store.get("ahkIntegrationEnabled", false),
+    evilTreeCaptureEnabled: store.get("evilTreeCaptureEnabled", false),
   };
 });
 
@@ -1113,6 +1294,12 @@ ipcMain.handle("set-debug-mode", async (event, enabled) => {
 // Set AHK integration
 ipcMain.handle("set-ahk-integration", async (event, enabled) => {
   store.set("ahkIntegrationEnabled", enabled);
+  return { success: true };
+});
+
+// Set evil tree capture
+ipcMain.handle("set-evil-tree-capture", async (event, enabled) => {
+  store.set("evilTreeCaptureEnabled", enabled);
   return { success: true };
 });
 

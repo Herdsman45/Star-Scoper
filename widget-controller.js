@@ -29,6 +29,14 @@ document.addEventListener("DOMContentLoaded", () => {
         electronAPI.ipc.send("open-session-log");
       });
     }
+
+    // Evil Tree Log button handler
+    const treeLogButton = document.getElementById("open-tree-log-btn");
+    if (treeLogButton) {
+      treeLogButton.addEventListener("click", () => {
+        electronAPI.ipc.send("open-tree-log");
+      });
+    }
   } else {
     // Fallback: always show button in browser
     showWidgetButton();
