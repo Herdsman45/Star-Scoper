@@ -262,6 +262,53 @@ function addManualEntry() {
   worldInput.focus();
 }
 
+// Import from Discord formatted list
+function importDiscordList() {
+  const textarea = document.getElementById("importDiscord");
+  const text = textarea.value.trim();
+
+  if (!text) {
+    alert("Please paste Discord formatted list");
+    return;
+  }
+
+  // Parse Discord format: World `58` <t:1736813284:R> (`HH:mm`)
+  const lines = text.split("\n");
+  let imported = 0;
+  let failed = 0;
+
+  lines.forEach((line) => {
+    // Match: World `58` <t:1736813284:R> ...
+    const match = line.match(/World\s+`(\d+)`\s+<t:(\d+):R>/i);
+    if (match) {
+      const world = parseInt(match[1], 10);
+      const unixTimestamp = parseInt(match[2], 10);
+      const timestamp = unixTimestamp * 1000; // Convert to milliseconds
+
+      if (!isNaN(world) && !isNaN(timestamp)) {
+        addEntry(world, timestamp);
+        imported++;
+      } else {
+        failed++;
+      }
+    } else if (line.trim()) {
+      // Non-empty line that didn't match
+      failed++;
+    }
+  });
+
+  if (imported > 0) {
+    alert(
+      `Imported ${imported} tree${imported === 1 ? "" : "s"}${failed > 0 ? ` (${failed} failed)` : ""}`,
+    );
+    textarea.value = "";
+  } else {
+    alert(
+      "No valid entries found. Expected format: World \`58\` <t:1736813284:R> (\`HH:mm\`)",
+    );
+  }
+}
+
 // Update entry type
 function updateEntryType(world, type) {
   const data = loadTreeData();
@@ -625,6 +672,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("addManualBtn")
     .addEventListener("click", addManualEntry);
+  document
+    .getElementById("importDiscordBtn")
+    .addEventListener("click", importDiscordList);
 
   // Enter key on manual entry inputs
   document.getElementById("manualWorld").addEventListener("keypress", (e) => {
@@ -637,6 +687,82 @@ document.addEventListener("DOMContentLoaded", () => {
       addManualEntry();
     }
   });
+
+  // Enable right-click context menu for textarea and input fields
+  const addContextMenuToElement = (element) => {
+    element.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+
+      const menu = document.createElement("div");
+      menu.style.position = "fixed";
+      menu.style.left = `${e.clientX}px`;
+      menu.style.top = `${e.clientY}px`;
+      menu.style.background = "#2d2d2d";
+      menu.style.border = "1px solid #555";
+      menu.style.borderRadius = "4px";
+      menu.style.padding = "4px 0";
+      menu.style.zIndex = "10000";
+      menu.style.minWidth = "100px";
+      menu.style.boxShadow = "0 2px 8px rgba(0,0,0,0.3)";
+
+      const menuItems = [
+        {
+          label: "Paste",
+          action: async () => {
+            const text = await navigator.clipboard.readText();
+            const start = element.selectionStart;
+            const end = element.selectionEnd;
+            element.value =
+              element.value.substring(0, start) +
+              text +
+              element.value.substring(end);
+            element.selectionStart = element.selectionEnd = start + text.length;
+            element.focus();
+          },
+        },
+      ];
+
+      menuItems.forEach((item) => {
+        const menuItem = document.createElement("div");
+        menuItem.textContent = item.label;
+        menuItem.style.padding = "6px 12px";
+        menuItem.style.cursor = "pointer";
+        menuItem.style.color = "#e0e0e0";
+        menuItem.style.fontSize = "13px";
+
+        menuItem.addEventListener("mouseenter", () => {
+          menuItem.style.background = "#0d6efd";
+        });
+        menuItem.addEventListener("mouseleave", () => {
+          menuItem.style.background = "transparent";
+        });
+        menuItem.addEventListener("click", async () => {
+          await item.action();
+          if (document.body.contains(menu)) {
+            document.body.removeChild(menu);
+          }
+        });
+
+        menu.appendChild(menuItem);
+      });
+
+      document.body.appendChild(menu);
+
+      // Close menu on click outside
+      const closeMenu = (event) => {
+        if (!menu.contains(event.target)) {
+          if (document.body.contains(menu)) {
+            document.body.removeChild(menu);
+          }
+          document.removeEventListener("click", closeMenu);
+        }
+      };
+      setTimeout(() => document.addEventListener("click", closeMenu), 0);
+    });
+  };
+
+  // Add context menu to textarea and input fields
+  addContextMenuToElement(document.getElementById("importDiscord"));
 
   // Listen for new entries from main process
   window.electronAPI.ipc.on("tree-log-add-entry", ({ world, treeTime }) => {
