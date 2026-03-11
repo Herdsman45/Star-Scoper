@@ -207,6 +207,17 @@
         background: #ef5350;
       }
 
+      .estimated-cell {
+        color: #ffb74d;
+        font-style: italic;
+        font-size: 12px;
+      }
+
+      .placeholder-row {
+        opacity: 0.4;
+        font-style: italic;
+      }
+
       .section-header {
         background: var(--bg-color, #1a1a1a) !important;
         font-weight: bold;
@@ -290,9 +301,10 @@
     <div class="header">
       <div class="header-left">
         <button id="clearBtn">Clear Log</button>
-        <button id="exportCsvBtn">Export CSV</button>
+        <!-- <button id="exportCsvBtn">Export CSV</button> -->
         <button id="copyCodeBlockBtn">Copy Discord List</button>
         <button id="splitToggleBtn">Split by Type</button>
+        <button id="placeholderToggleBtn">Fill Empty</button>
         <span class="stats" id="statsLabel">0 trees logged</span>
       </div>
       <div class="header-right">
@@ -341,13 +353,14 @@
           <th class="sortable" data-col="1">Type</th>
           <th class="sortable" data-col="2">Available Time (UTC)</th>
           <th class="sortable" data-col="3">Minutes Until</th>
+          <th class="sortable" data-col="4">Estimated</th>
           <th>Tree Type</th>
           <th>Delete</th>
         </tr>
       </thead>
       <tbody id="tableBody">
         <tr class="empty-state">
-          <td colspan="6">
+          <td colspan="7">
             No trees captured yet. Capture a region to populate this log.
           </td>
         </tr>
