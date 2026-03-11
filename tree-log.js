@@ -317,8 +317,8 @@ function importDiscordList() {
   let failed = 0;
 
   lines.forEach((line) => {
-    // Match new format: w58 <t:1736813284:R> ...
-    let match = line.match(/w(\d+)\s+<t:(\d+):R>/i);
+    // Match new format with or without backticks: w58 or w`58`
+    let match = line.match(/w`?(\d+)`?\s+<t:(\d+):R>/i);
 
     // Try old format if new format didn't match: World `58` <t:1736813284:R> ...
     if (!match) {
