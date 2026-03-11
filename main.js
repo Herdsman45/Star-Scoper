@@ -939,13 +939,13 @@ async function captureAndProcess(slotNumber) {
           const { extractWorldNumber } = require("./lib/star-formatter");
 
           const world = extractWorldNumber(ocrB.data.text);
-          const treeTime = parseEvilTreeTime(ocrC.data.text);
+          const treeTimeResult = parseEvilTreeTime(ocrC.data.text);
 
           console.log("[TREE_LOG] Extracted data:", {
             world,
-            treeTime,
-            treeTimeReadable: treeTime
-              ? new Date(treeTime).toISOString()
+            treeTimeResult,
+            treeTimeReadable: treeTimeResult
+              ? new Date(treeTimeResult.timestamp).toISOString()
               : null,
           });
 
@@ -954,12 +954,13 @@ async function captureAndProcess(slotNumber) {
             treeLogWindow &&
             !treeLogWindow.isDestroyed() &&
             world !== "Unknown" &&
-            treeTime !== null
+            treeTimeResult !== null
           ) {
             console.log("[TREE_LOG] Sending to tree log window");
             treeLogWindow.webContents.send("tree-log-add-entry", {
               world,
-              treeTime,
+              treeTime: treeTimeResult.timestamp,
+              estimated: treeTimeResult.estimated,
             });
           } else {
             console.log(

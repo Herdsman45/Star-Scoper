@@ -6,6 +6,7 @@
 // Storage keys
 const STORAGE_KEY = "starScoper_treeLog";
 const SPLIT_MODE_KEY = "starScoper_treeLog_splitMode";
+const PLACEHOLDER_MODE_KEY = "starScoper_treeLog_placeholderMode";
 
 // Worlds data (Members/Free-to-play)
 let worldTypeMap = new Map();
@@ -41,6 +42,16 @@ function getSplitMode() {
 
 function setSplitMode(enabled) {
   localStorage.setItem(SPLIT_MODE_KEY, String(enabled));
+}
+
+// Get/set placeholder mode
+function getPlaceholderMode() {
+  const saved = localStorage.getItem(PLACEHOLDER_MODE_KEY);
+  return saved === "true";
+}
+
+function setPlaceholderMode(enabled) {
+  localStorage.setItem(PLACEHOLDER_MODE_KEY, String(enabled));
 }
 
 // Load data from localStorage
@@ -107,7 +118,7 @@ function renderTable() {
 
   if (data.length === 0) {
     tbody.innerHTML =
-      '<tr class="empty-state"><td colspan="6">No trees captured yet. Capture a region to populate this log.</td></tr>';
+      '<tr class="empty-state"><td colspan="7">No trees captured yet. Capture a region to populate this log.</td></tr>';
     document.getElementById("statsLabel").textContent = "0 trees logged";
     return;
   }
@@ -134,64 +145,91 @@ function renderTable() {
       const headerRow = tbody.insertRow();
       headerRow.className = "section-header";
       const headerCell = headerRow.insertCell(0);
-      headerCell.colSpan = 6;
+      headerCell.colSpan = 7;
       headerCell.textContent = sectionLabel;
     }
 
     entries.forEach((entry) => {
       const row = tbody.insertRow();
-      const minutesUntil = getMinutesUntil(entry.availableTime);
 
-      row.insertCell(0).textContent = entry.world;
+      // Handle placeholder entries differently
+      if (entry.isPlaceholder) {
+        row.classList.add("placeholder-row");
 
-      const typeCell = row.insertCell(1);
-      const worldType = getWorldType(entry.world);
-      typeCell.textContent = worldType === "Members" ? "M" : "F2P";
-      typeCell.className =
-        worldType === "Members" ? "world-type-members" : "world-type-f2p";
+        row.insertCell(0).textContent = entry.world;
 
-      row.insertCell(2).textContent = formatUTCTime(entry.availableTime);
-      row.insertCell(3).innerHTML = formatMinutesUntil(minutesUntil);
+        const typeCell = row.insertCell(1);
+        const worldType = getWorldType(entry.world);
+        typeCell.textContent = worldType === "Members" ? "M" : "F2P";
+        typeCell.className =
+          worldType === "Members" ? "world-type-members" : "world-type-f2p";
 
-      // Add tree type dropdown
-      const treeTypeCell = row.insertCell(4);
-      const typeSelect = document.createElement("select");
-      typeSelect.className = "type-dropdown";
-      typeSelect.innerHTML = `
-        <option value="">-</option>
-        <option value="Normal">Normal</option>
-        <option value="Oak">Oak</option>
-        <option value="Willow">Willow</option>
-        <option value="Maple">Maple</option>
-        <option value="Yew">Yew</option>
-        <option value="Magic">Magic</option>
-        <option value="Elder">Elder</option>
-      `;
-      typeSelect.value = entry.type || "";
-      typeSelect.addEventListener("change", () => {
-        updateEntryType(entry.world, typeSelect.value);
-      });
-      treeTypeCell.appendChild(typeSelect);
+        row.insertCell(2).textContent = "-";
+        row.insertCell(3).textContent = "-";
+        row.insertCell(4).textContent = ""; // Estimated column
+        row.insertCell(5).textContent = "-"; // Tree type
+        row.insertCell(6).textContent = ""; // No delete button for placeholders
+      } else {
+        const minutesUntil = getMinutesUntil(entry.availableTime);
 
-      // Add delete button
-      const deleteCell = row.insertCell(5);
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
-      deleteBtn.textContent = "×";
-      deleteBtn.title = "Delete this entry";
-      deleteBtn.addEventListener("click", () => {
-        deleteEntry(entry.world);
-      });
-      deleteCell.appendChild(deleteBtn);
+        row.insertCell(0).textContent = entry.world;
 
-      // Add visual feedback for expired entries
-      if (minutesUntil <= -15) {
-        row.classList.add("expired-row");
-      }
+        const typeCell = row.insertCell(1);
+        const worldType = getWorldType(entry.world);
+        typeCell.textContent = worldType === "Members" ? "M" : "F2P";
+        typeCell.className =
+          worldType === "Members" ? "world-type-members" : "world-type-f2p";
 
-      // Add visual feedback for typed entries
-      if (entry.type) {
-        row.classList.add("typed-row");
+        row.insertCell(2).textContent = formatUTCTime(entry.availableTime);
+        row.insertCell(3).innerHTML = formatMinutesUntil(minutesUntil);
+
+        // Add estimated column
+        const estimatedCell = row.insertCell(4);
+        if (entry.estimated) {
+          estimatedCell.textContent = "estimated";
+          estimatedCell.className = "estimated-cell";
+        }
+
+        // Add tree type dropdown
+        const treeTypeCell = row.insertCell(5);
+        const typeSelect = document.createElement("select");
+        typeSelect.className = "type-dropdown";
+        typeSelect.innerHTML = `
+          <option value="">-</option>
+          <option value="Normal">Normal</option>
+          <option value="Oak">Oak</option>
+          <option value="Willow">Willow</option>
+          <option value="Maple">Maple</option>
+          <option value="Yew">Yew</option>
+          <option value="Magic">Magic</option>
+          <option value="Elder">Elder</option>
+        `;
+        typeSelect.value = entry.type || "";
+        typeSelect.addEventListener("change", () => {
+          updateEntryType(entry.world, typeSelect.value);
+        });
+        treeTypeCell.appendChild(typeSelect);
+
+        // Add delete button
+        const deleteCell = row.insertCell(6);
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "delete-btn";
+        deleteBtn.textContent = "×";
+        deleteBtn.title = "Delete this entry";
+        deleteBtn.addEventListener("click", () => {
+          deleteEntry(entry.world);
+        });
+        deleteCell.appendChild(deleteBtn);
+
+        // Add visual feedback for expired entries
+        if (minutesUntil <= -15) {
+          row.classList.add("expired-row");
+        }
+
+        // Add visual feedback for typed entries
+        if (entry.type) {
+          row.classList.add("typed-row");
+        }
       }
     });
   };
@@ -207,11 +245,11 @@ function renderTable() {
   }
 
   document.getElementById("statsLabel").textContent =
-    `${data.length} tree${data.length === 1 ? "" : "s"} logged`;
+    `${data.filter((e) => !e.isPlaceholder).length} tree${data.filter((e) => !e.isPlaceholder).length === 1 ? "" : "s"} logged`;
 }
 
 // Add new entry (called from main process via IPC)
-function addEntry(world, treeTime) {
+function addEntry(world, treeTime, estimated = false) {
   const data = loadTreeData();
 
   // treeTime is Unix timestamp in milliseconds
@@ -226,6 +264,7 @@ function addEntry(world, treeTime) {
     availableTime,
     capturedAt: Date.now(),
     type: null,
+    estimated: estimated,
   });
 
   saveTreeData(filtered);
@@ -272,14 +311,20 @@ function importDiscordList() {
     return;
   }
 
-  // Parse Discord format: World `58` <t:1736813284:R> (`HH:mm`)
+  // Parse Discord format: w58 <t:1736813284:R> (15:09) f2p or World `58` <t:1736813284:R> (`HH:mm`)
   const lines = text.split("\n");
   let imported = 0;
   let failed = 0;
 
   lines.forEach((line) => {
-    // Match: World `58` <t:1736813284:R> ...
-    const match = line.match(/World\s+`(\d+)`\s+<t:(\d+):R>/i);
+    // Match new format: w58 <t:1736813284:R> ...
+    let match = line.match(/w(\d+)\s+<t:(\d+):R>/i);
+
+    // Try old format if new format didn't match: World `58` <t:1736813284:R> ...
+    if (!match) {
+      match = line.match(/World\s+`(\d+)`\s+<t:(\d+):R>/i);
+    }
+
     if (match) {
       const world = parseInt(match[1], 10);
       const unixTimestamp = parseInt(match[2], 10);
@@ -304,7 +349,7 @@ function importDiscordList() {
     textarea.value = "";
   } else {
     alert(
-      "No valid entries found. Expected format: World \`58\` <t:1736813284:R> (\`HH:mm\`)",
+      "No valid entries found. Expected format: w58 <t:1736813284:R> (15:09) f2p",
     );
   }
 }
@@ -338,7 +383,10 @@ function clearLog() {
 
 // Export to CSV
 function exportToCsv() {
-  const data = loadTreeData();
+  let data = loadTreeData();
+  // Filter out placeholders
+  data = data.filter((entry) => !entry.isPlaceholder);
+
   if (data.length === 0) {
     alert("No data to export");
     return;
@@ -373,7 +421,10 @@ function exportToCsv() {
 
 // Copy as Discord formatted list with live timers
 function copyCodeBlock() {
-  const data = loadTreeData();
+  let data = loadTreeData();
+  // Filter out placeholders
+  data = data.filter((entry) => !entry.isPlaceholder);
+
   if (data.length === 0) {
     alert("No data to copy");
     return;
@@ -390,13 +441,15 @@ function copyCodeBlock() {
     return;
   }
 
-  // Format: World `58` <t:1736813284:R> (`HH:mm`)
+  // Format: w58 <t:1736813284:R> (15:09) f2p
   let lines = [];
 
   filteredData.forEach((entry) => {
     const unixTimestamp = Math.floor(entry.availableTime / 1000);
     const utcTime = formatUTCTime(entry.availableTime);
-    const line = `World \`${entry.world}\` <t:${unixTimestamp}:R> (\`${utcTime}\`)`;
+    const worldType = getWorldType(entry.world);
+    const suffix = worldType === "Members" ? "" : " `f2p`";
+    const line = `w\`${entry.world}\` <t:${unixTimestamp}:R> (\`${utcTime}\`)${suffix}`;
     lines.push(line);
   });
 
@@ -438,6 +491,46 @@ function toggleSplitMode() {
   renderTable();
 }
 
+// Toggle placeholder mode
+function togglePlaceholderMode() {
+  const enabled = !getPlaceholderMode();
+  setPlaceholderMode(enabled);
+  const btn = document.getElementById("placeholderToggleBtn");
+  btn.textContent = enabled ? "Hide Empty" : "Fill Empty";
+
+  if (enabled) {
+    // Add placeholder entries for all worlds not in the list
+    const data = loadTreeData();
+    const existingWorldIds = new Set(data.map((entry) => entry.world));
+
+    // Get all world IDs from worldTypeMap
+    const placeholdersToAdd = [];
+    worldTypeMap.forEach((type, worldId) => {
+      if (!existingWorldIds.has(worldId)) {
+        placeholdersToAdd.push({
+          world: worldId,
+          availableTime: null,
+          capturedAt: null,
+          type: null,
+          estimated: false,
+          isPlaceholder: true,
+        });
+      }
+    });
+
+    // Add placeholders to data
+    const updatedData = [...data, ...placeholdersToAdd];
+    saveTreeData(updatedData);
+  } else {
+    // Remove all placeholder entries
+    let data = loadTreeData();
+    data = data.filter((entry) => !entry.isPlaceholder);
+    saveTreeData(data);
+  }
+
+  renderTable();
+}
+
 // Sorting functionality
 function setupSorting() {
   const headers = document.querySelectorAll("th.sortable");
@@ -467,6 +560,17 @@ function setupSorting() {
 // Sort function (extracted for reuse)
 function getSortFunction(col, isAscending) {
   return (a, b) => {
+    // When sorting by world number (col 0), include placeholders in normal sort
+    // Otherwise, always sort placeholders to the bottom
+    if (col !== 0) {
+      if (a.isPlaceholder && !b.isPlaceholder) return 1;
+      if (!a.isPlaceholder && b.isPlaceholder) return -1;
+      if (a.isPlaceholder && b.isPlaceholder) {
+        // Both are placeholders, sort by world number
+        return isAscending ? a.world - b.world : b.world - a.world;
+      }
+    }
+
     let valA, valB;
     switch (col) {
       case 0:
@@ -531,6 +635,11 @@ function getSortFunction(col, isAscending) {
             return valA - valB;
           }
         }
+      case 4:
+        // Estimated column: sort by boolean (false first, then true)
+        valA = a.estimated ? 1 : 0;
+        valB = b.estimated ? 1 : 0;
+        break;
     }
 
     // Generic sorting for non-minutes columns
@@ -579,8 +688,61 @@ function applySortToData(col, isAscending) {
 
 // Update countdown every minute and re-apply last sort
 function updateCountdown() {
-  const data = loadTreeData();
+  let data = loadTreeData();
   if (data.length === 0) return;
+
+  // Check for expired non-estimated trees and create estimated respawn entries
+  const now = Date.now();
+  const entriesToProcess = [];
+
+  data.forEach((entry) => {
+    // Skip placeholders
+    if (entry.isPlaceholder) return;
+
+    const minutesUntil = getMinutesUntil(entry.availableTime);
+    // If tree is expired (-15 or less) and not estimated, mark it for respawn
+    if (minutesUntil <= -15 && !entry.estimated) {
+      entriesToProcess.push({
+        world: entry.world,
+        originalTime: entry.availableTime,
+        type: entry.type,
+      });
+    }
+  });
+
+  // Remove expired non-estimated trees and evaluate if they should respawn
+  if (entriesToProcess.length > 0) {
+    const worldsToRemove = entriesToProcess.map((e) => e.world);
+    data = data.filter(
+      (entry) =>
+        !(
+          worldsToRemove.includes(entry.world) &&
+          getMinutesUntil(entry.availableTime) <= -15 &&
+          !entry.estimated
+        ),
+    );
+
+    // Process each expired entry
+    entriesToProcess.forEach((expiredEntry) => {
+      // Calculate next spawn by adding 148 minutes to the original time
+      const nextSpawnTime = expiredEntry.originalTime + 148 * 60 * 1000;
+      const minutesUntilNextSpawn = getMinutesUntil(nextSpawnTime);
+
+      // Only add estimated entry if it's not more than one cycle behind (not older than -148 minutes)
+      if (minutesUntilNextSpawn > -148) {
+        data.unshift({
+          world: expiredEntry.world,
+          availableTime: nextSpawnTime,
+          capturedAt: now,
+          type: null, // Reset tree type since we can't know what will spawn next
+          estimated: true,
+        });
+      }
+      // If minutesUntilNextSpawn <= -148, the entry is too stale and gets deleted (not re-added)
+    });
+
+    saveTreeData(data);
+  }
 
   // If there's a saved sort state, re-apply it
   if (lastSortColumn !== null) {
@@ -642,6 +804,14 @@ document.addEventListener("DOMContentLoaded", () => {
     splitBtn.textContent = getSplitMode() ? "Show Mixed" : "Split by Type";
   }
 
+  // Set initial placeholder button text
+  const placeholderBtn = document.getElementById("placeholderToggleBtn");
+  if (placeholderBtn) {
+    placeholderBtn.textContent = getPlaceholderMode()
+      ? "Hide Empty"
+      : "Fill Empty";
+  }
+
   renderTable();
   setupSorting();
   updateClock();
@@ -669,6 +839,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document
     .getElementById("splitToggleBtn")
     .addEventListener("click", toggleSplitMode);
+  document
+    .getElementById("placeholderToggleBtn")
+    .addEventListener("click", togglePlaceholderMode);
   document
     .getElementById("addManualBtn")
     .addEventListener("click", addManualEntry);
@@ -765,13 +938,17 @@ document.addEventListener("DOMContentLoaded", () => {
   addContextMenuToElement(document.getElementById("importDiscord"));
 
   // Listen for new entries from main process
-  window.electronAPI.ipc.on("tree-log-add-entry", ({ world, treeTime }) => {
-    console.log("[TREE_LOG] Received entry:", {
-      world,
-      treeTime,
-    });
-    addEntry(world, treeTime);
-  });
+  window.electronAPI.ipc.on(
+    "tree-log-add-entry",
+    ({ world, treeTime, estimated }) => {
+      console.log("[TREE_LOG] Received entry:", {
+        world,
+        treeTime,
+        estimated,
+      });
+      addEntry(world, treeTime, estimated || false);
+    },
+  );
 
   // Listen for storage changes (if multiple windows open)
   window.addEventListener("storage", (e) => {
